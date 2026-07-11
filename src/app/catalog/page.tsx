@@ -14,6 +14,28 @@ type Product = {
   imageUrl: string;
   colors: string[];
   sizes: string[];
+  starRating?: number;
+};
+
+const getColorHex = (colorName: string) => {
+  const name = colorName.trim().toLowerCase();
+  switch (name) {
+    case "red": return "#ef4444";
+    case "black": return "#111827";
+    case "white": return "#ffffff";
+    case "blue": return "#3b82f6";
+    case "green": return "#22c55e";
+    case "grey":
+    case "gray": return "#9ca3af";
+    case "brown": return "#78350f";
+    case "yellow": return "#eab308";
+    case "orange": return "#f97316";
+    case "pink": return "#ec4899";
+    case "purple": return "#a855f7";
+    case "beige": return "#f5f5dc";
+    case "suede": return "#b45309";
+    default: return "#4b5563";
+  }
 };
 
 function CatalogContent() {
@@ -114,12 +136,12 @@ function CatalogContent() {
   return (
     <div className="min-h-screen bg-[#0b141a] text-white pb-24">
       <header className="sticky top-0 z-40 flex items-center justify-between border-b border-white/10 bg-[#1f2c34] px-4 py-3">
-        <h1 className="font-semibold">Sleek Catalogue</h1>
+        <h1 className="font-semibold text-[#25D366]">Sleek Catalogue</h1>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setSignupOpen(true)}
-            className="rounded-lg bg-white/10 p-2"
+            className="rounded-lg bg-white/10 p-2 hover:bg-white/20 transition-all"
             aria-label="Sign up"
           >
             <UserPlus className="h-5 w-5" />
@@ -127,7 +149,7 @@ function CatalogContent() {
           <button
             type="button"
             onClick={() => setCartOpen(true)}
-            className="relative rounded-lg bg-brand-500 p-2 text-gray-950"
+            className="relative rounded-lg bg-[#25D366] p-2 text-gray-950 hover:bg-[#20ba56] transition-all"
             aria-label="Cart"
           >
             <ShoppingCart className="h-5 w-5" />
@@ -140,70 +162,129 @@ function CatalogContent() {
         </div>
       </header>
 
-      <div className="bg-brand-500/10 border-b border-brand-500/20 px-4 py-3 text-sm text-brand-200">
+      <div className="bg-[#25D366]/10 border-b border-[#25D366]/20 px-4 py-3 text-sm text-[#25D366] font-medium text-center">
         Free delivery on orders over ₦80,000 this week!
       </div>
 
-      <div className="grid grid-cols-2 gap-3 p-4">
-        {products.map((p) => (
-          <article
-            key={p.id}
-            className="rounded-xl border border-white/5 bg-[#1f2c34] overflow-hidden"
-          >
-            <div className="relative h-36">
-              <Image src={p.imageUrl} alt={p.name} fill className="object-cover" unoptimized />
-            </div>
-            <div className="p-3">
-              <h2 className="text-sm font-medium truncate">{p.name}</h2>
-              <p className="text-brand-400 text-sm font-semibold">{formatCurrency(p.price)}</p>
-              <select
-                className="mt-2 w-full rounded bg-[#2a3942] px-2 py-1 text-xs"
-                value={selected[p.id]?.color || p.colors[0]}
-                onChange={(e) =>
-                  setSelected((s) => ({
-                    ...s,
-                    [p.id]: {
-                      color: e.target.value,
-                      size: s[p.id]?.size || p.sizes[0],
-                    },
-                  }))
-                }
-              >
-                {p.colors.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="mt-1 w-full rounded bg-[#2a3942] px-2 py-1 text-xs"
-                value={selected[p.id]?.size || p.sizes[0]}
-                onChange={(e) =>
-                  setSelected((s) => ({
-                    ...s,
-                    [p.id]: {
-                      color: s[p.id]?.color || p.colors[0],
-                      size: e.target.value,
-                    },
-                  }))
-                }
-              >
-                {p.sizes.map((sz) => (
-                  <option key={sz} value={sz}>
-                    Size {sz}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => addToCart(p)}
-                className="mt-2 w-full rounded bg-brand-500 py-1.5 text-xs font-semibold text-gray-950"
-              >
-                Add to cart
-              </button>
-            </div>
-          </article>
-        ))}
+      <div className="grid grid-cols-2 gap-3.5 p-4">
+        {products.map((p) => {
+          const variant = selected[p.id] || {
+            color: p.colors[0],
+            size: p.sizes[0],
+          };
+          const rating = p.starRating || 4.5;
+          const stars = Array.from({ length: 5 }, (_, i) => i < Math.floor(rating));
+
+          return (
+            <article
+              key={p.id}
+              className="rounded-2xl border border-white/5 bg-[#1f2c34]/80 backdrop-blur-sm overflow-hidden flex flex-col justify-between shadow-lg"
+            >
+              <div className="relative h-40 bg-[#141d26]">
+                <Image src={p.imageUrl} alt={p.name} fill className="object-cover transition-transform duration-300 hover:scale-105" unoptimized />
+                
+                {/* Brand Badge */}
+                <span className="absolute left-2 top-2 rounded bg-[#0b141a]/85 border border-[#25D366]/30 px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider text-[#25D366]">
+                  SLEEK FOOTWEAR CO.
+                </span>
+              </div>
+              
+              <div className="p-3.5 flex flex-col justify-between flex-1">
+                <div>
+                  <h2 className="text-sm font-semibold text-white truncate">{p.name}</h2>
+                  
+                  {/* Star Rating */}
+                  <div className="flex items-center gap-1 mt-0.5 mb-1.5">
+                    <div className="flex text-amber-400 text-[10px]">
+                      {stars.map((filled, i) => (
+                        <span key={i}>{filled ? "★" : "☆"}</span>
+                      ))}
+                    </div>
+                    <span className="text-[10px] text-gray-400 font-medium">({rating.toFixed(1)})</span>
+                  </div>
+                  
+                  <p className="text-[#25D366] text-sm font-bold">{formatCurrency(p.price)}</p>
+                  
+                  {/* Color Picker */}
+                  <div className="mt-3">
+                    <label className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Color</label>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {p.colors.map((c) => {
+                        const isSelected = variant.color === c;
+                        const hex = getColorHex(c);
+                        return (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setSelected((s) => ({
+                              ...s,
+                              [p.id]: { color: c, size: s[p.id]?.size || p.sizes[0] }
+                            }))}
+                            className={`h-5 w-5 rounded-full border transition-all ${
+                              isSelected 
+                                ? 'border-[#25D366] ring-1 ring-[#25D366] scale-110' 
+                                : 'border-white/10 opacity-70 hover:opacity-100'
+                            }`}
+                            style={{ backgroundColor: hex }}
+                            title={c}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Size Picker */}
+                  <div className="mt-3">
+                    <label className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Size</label>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {p.sizes.map((sz) => {
+                        const isSelected = variant.size === sz;
+                        return (
+                          <button
+                            key={sz}
+                            type="button"
+                            onClick={() => setSelected((s) => ({
+                              ...s,
+                              [p.id]: { color: s[p.id]?.color || p.colors[0], size: sz }
+                            }))}
+                            className={`h-7 w-8 rounded-lg text-xs font-bold border flex items-center justify-center transition-all ${
+                              isSelected 
+                                ? 'bg-[#25D366] text-gray-950 border-[#25D366]' 
+                                : 'bg-[#2a3942] text-white border-white/5 hover:border-white/20'
+                            }`}
+                          >
+                            {sz}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="flex gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => addToCart(p)}
+                    className="flex-1 rounded-xl bg-[#2a3942] hover:bg-[#374248] py-2 text-xs font-bold text-white border border-white/5 transition-all active:scale-95"
+                  >
+                    + Cart
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await addToCart(p);
+                      await checkout();
+                    }}
+                    className="flex-1 rounded-xl bg-[#25D366] hover:bg-[#20ba56] py-2 text-xs font-extrabold text-gray-950 transition-all active:scale-95 shadow-md shadow-[#25D366]/10"
+                  >
+                    Buy
+                  </button>
+                </div>
+              </div>
+            </article>
+          );
+        })}
       </div>
 
       {cartOpen && (

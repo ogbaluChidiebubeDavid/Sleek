@@ -87,20 +87,7 @@ export async function sendProductCarousel(
   }[]
 ) {
   const config = getConfig();
-  const catalogText =
-    introText +
-    "\n\n" +
-    products
-      .map(
-        (p, i) =>
-          `${i + 1}. *${p.name}* — ₦${p.price.toLocaleString()}\n` +
-          (p.colors && p.colors.length ? `   Colors: ${p.colors.join(", ")}\n` : "") +
-          (p.sizes && p.sizes.length ? `   Sizes: ${p.sizes.join(", ")}\n` : "") +
-          `   Reply: BUY_${p.id} | CART_${p.id}`
-      )
-      .join("\n\n");
-
-  await sendTextMessage(to, catalogText);
+  await sendTextMessage(to, introText);
 
   if (!config) return { simulated: true };
 
