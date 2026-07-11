@@ -9,13 +9,17 @@ export async function GET(req: NextRequest) {
     const dbUrl = process.env.DATABASE_URL || "";
     const obfuscatedUrl = dbUrl.replace(/:[^:@]+@/, ":****@");
     
-    // Try simple query
+    // Try query counts
     const userCount = await prisma.user.count();
+    const stateCount = await prisma.conversationState.count();
+    const states = await prisma.conversationState.findMany({ take: 10 });
     
     return NextResponse.json({
       success: true,
       message: "Database connection verified successfully!",
       usersCount: userCount,
+      conversationStatesCount: stateCount,
+      conversationStates: states.map(s => ({ phone: s.phone, step: s.step, updatedAt: s.updatedAt })),
       databaseUrlConfigured: dbUrl ? "Yes" : "No",
       databaseUrlPattern: obfuscatedUrl
     });
