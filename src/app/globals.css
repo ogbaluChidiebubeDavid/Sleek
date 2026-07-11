@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sleek-50: #eefdf4;
+  --color-sleek-100: #dcfce7;
+  --color-sleek-200: #bbf7d0;
+  --color-sleek-300: #86efac;
+  --color-sleek-400: #4ade80;
+  --color-sleek-500: #00c980;
+  --color-sleek-600: #00b372;
+  --color-sleek-700: #009d64;
+  --color-sleek-800: #018454;
+  --color-sleek-900: #026c45;
+
+  --color-brand-50: var(--color-sleek-50);
+  --color-brand-100: var(--color-sleek-100);
+  --color-brand-200: var(--color-sleek-200);
+  --color-brand-300: var(--color-sleek-300);
+  --color-brand-400: var(--color-sleek-400);
+  --color-brand-500: var(--color-sleek-500);
+  --color-brand-600: var(--color-sleek-600);
+  --color-brand-700: var(--color-sleek-700);
+  --color-brand-800: var(--color-sleek-800);
+  --color-brand-900: var(--color-sleek-900);
+
+  --font-display: "Archivo Black", "Impact", "Arial Black", sans-serif;
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: #f4f5f7;
+  color: #111827;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Light take on Azza’s geometric hero — no black background */
+.azza-pattern {
+  background-color: #f4f5f7;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c5cdd8' fill-opacity='0.35'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.hero-geometric {
+  position: relative;
+  background-color: #f4f5f7;
+  overflow: hidden;
+}
+
+.hero-geometric::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23d8dde6'/%3E%3Cstop offset='100%25' stop-color='%23eef0f4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpolygon fill='url(%23g)' opacity='0.55' points='0,0 420,0 0,520'/%3E%3Cpolygon fill='%23e2e6ec' opacity='0.45' points='800,0 800,380 280,0'/%3E%3Cpolygon fill='%23d4dae3' opacity='0.35' points='800,800 800,320 120,800'/%3E%3Cpolygon fill='%23e8ebf0' opacity='0.5' points='0,800 0,400 520,800'/%3E%3C/svg%3E");
+  background-size: cover;
+  background-position: center top;
+  pointer-events: none;
+}
+
+.hero-fade {
+  background: linear-gradient(180deg, transparent 0%, #f4f5f7 100%);
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

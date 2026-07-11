@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  phone            String   @unique
+  name             String?
+  email            String?
+  password         String?  // Acts as their checkout PIN
+  shippingPhone    String?
+  shippingName     String?
+  shippingEmail    String?
+  shippingAddress  String?
+  shippingCity     String?
+  shippingCountry  String?
+  walletAddress    String?
+  walletPrivateKey String?
+  createdAt        DateTime @default(now())
+  cart             Cart?
+  orders           Order[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Float
+  currency    String   @default("NGN")
+  imageUrl    String
+  category    String
+  colors      String   // JSON array as string
+  sizes       String   // JSON array as string
+  starRating  Float    @default(4.5)
+  stock       Int      @default(50)
+  featured    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+  vendorId    String?
+  vendor      Vendor?  @relation(fields: [vendorId], references: [id])
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  color     String
+  size      String
+  quantity  Int     @default(1)
+
+  @@unique([cartId, productId, color, size])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  trackingNumber  String      @unique
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  status          String      @default("pending")
+  shipping_status String      @default("pending")
+  paymentMethod   String?
+  paymentStatus   String      @default("pending")
+  paymentRef      String?
+  txHash          String?
+  totalAmount     Float
+  currency        String      @default("NGN")
+  items           OrderItem[]
+  shippingName    String?
+  shippingEmail   String?
+  shippingAddress String?
+  shippingCity    String?
+  shippingCountry String?
+  vendorId        String?
+  vendor          Vendor?     @relation(fields: [vendorId], references: [id])
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  name      String
+  color     String
+  size      String
+  quantity  Int
+  price     Float
+}
+
+model ConversationState {
+  phone     String @id
+  step      String @default("idle")
+  data      String @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+model Vendor {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  password         String    @default("")
+  phone            String    @default("")
+  businessName     String
+  walletAddress    String
+  walletPrivateKey String
+  kycStatus        String    @default("pending") // pending, verified
+  kycFaceImage     String?
+  products         Product[]
+  orders           Order[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
