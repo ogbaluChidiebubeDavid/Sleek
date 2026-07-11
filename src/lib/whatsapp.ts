@@ -17,17 +17,22 @@ export async function sendTextMessage(to: string, body: string) {
   }
 
   const { token, phoneId } = config;
-  const res = await axios.post(
-    `${API_BASE}/${phoneId}/messages`,
-    {
-      messaging_product: "whatsapp",
-      to: to.replace(/\D/g, ""),
-      type: "text",
-      text: { body },
-    },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return res.data;
+  try {
+    const res = await axios.post(
+      `${API_BASE}/${phoneId}/messages`,
+      {
+        messaging_product: "whatsapp",
+        to: to.replace(/\D/g, ""),
+        type: "text",
+        text: { body },
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return res.data;
+  } catch (error: any) {
+    console.error("[WhatsApp Send Error - sendTextMessage]:", error.response?.data || error.message);
+    return { error: error.message, details: error.response?.data };
+  }
 }
 
 export async function sendInteractiveButtons(
@@ -42,26 +47,31 @@ export async function sendInteractiveButtons(
   }
 
   const { token, phoneId } = config;
-  const res = await axios.post(
-    `${API_BASE}/${phoneId}/messages`,
-    {
-      messaging_product: "whatsapp",
-      to: to.replace(/\D/g, ""),
-      type: "interactive",
-      interactive: {
-        type: "button",
-        body: { text: bodyText },
-        action: {
-          buttons: buttons.slice(0, 3).map((b) => ({
-            type: "reply",
-            reply: { id: b.id, title: b.title.slice(0, 20) },
-          })),
+  try {
+    const res = await axios.post(
+      `${API_BASE}/${phoneId}/messages`,
+      {
+        messaging_product: "whatsapp",
+        to: to.replace(/\D/g, ""),
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: bodyText },
+          action: {
+            buttons: buttons.slice(0, 3).map((b) => ({
+              type: "reply",
+              reply: { id: b.id, title: b.title.slice(0, 20) },
+            })),
+          },
         },
       },
-    },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return res.data;
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return res.data;
+  } catch (error: any) {
+    console.error("[WhatsApp Send Error - sendInteractiveButtons]:", error.response?.data || error.message);
+    return { error: error.message, details: error.response?.data };
+  }
 }
 
 export async function sendProductCarousel(
@@ -100,38 +110,42 @@ export async function sendProductCarousel(
     const colorText = product.colors && product.colors.length ? `\nColors: ${product.colors.join(", ")}` : "";
     const sizeText = product.sizes && product.sizes.length ? `\nSizes: ${product.sizes.join(", ")}` : "";
 
-    await axios.post(
-      `${API_BASE}/${phoneId}/messages`,
-      {
-        messaging_product: "whatsapp",
-        to: to.replace(/\D/g, ""),
-        type: "interactive",
-        interactive: {
-          type: "button",
-          header: {
-            type: "image",
-            image: { link: product.imageUrl },
-          },
-          body: {
-            text: `${product.name}\n₦${product.price.toLocaleString()}${colorText}${sizeText}`,
-          },
-          action: {
-            buttons: [
-              { type: "reply", reply: { id: `buy_${product.id}`, title: "Buy" } },
-              {
-                type: "reply",
-                reply: { id: `cart_${product.id}`, title: "Add to cart" },
-              },
-              {
-                type: "reply",
-                reply: { id: "view_more", title: "View more" },
-              },
-            ],
+    try {
+      await axios.post(
+        `${API_BASE}/${phoneId}/messages`,
+        {
+          messaging_product: "whatsapp",
+          to: to.replace(/\D/g, ""),
+          type: "interactive",
+          interactive: {
+            type: "button",
+            header: {
+              type: "image",
+              image: { link: product.imageUrl },
+            },
+            body: {
+              text: `${product.name}\n₦${product.price.toLocaleString()}${colorText}${sizeText}`,
+            },
+            action: {
+              buttons: [
+                { type: "reply", reply: { id: `buy_${product.id}`, title: "Buy" } },
+                {
+                  type: "reply",
+                  reply: { id: `cart_${product.id}`, title: "Add to cart" },
+                },
+                {
+                  type: "reply",
+                  reply: { id: "view_more", title: "View more" },
+                },
+              ],
+            },
           },
         },
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (error: any) {
+      console.error(`[WhatsApp Send Error - sendProductCarousel Carousel Item ${product.name}]:`, error.response?.data || error.message);
+    }
   }
 
   await sendInteractiveButtons(to, "Browse our full catalogue or checkout:", [
