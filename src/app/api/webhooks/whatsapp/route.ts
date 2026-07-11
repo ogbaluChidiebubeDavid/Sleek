@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleIncomingMessage } from "@/lib/conversation";
+import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const mode = req.nextUrl.searchParams.get("hub.mode");
@@ -14,9 +15,27 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  let rawBody = "";
   try {
-    const body = await req.json();
+    rawBody = await req.text();
+    
+    // Log incoming webhook to Supabase audit log
+    try {
+      await prisma.webhookLog.create({
+        data: {
+          payload: rawBody,
+          headers: JSON.stringify(Object.fromEntries(req.headers.entries())),
+        },
+      });
+    } catch (logError) {
+      console.error("[WhatsApp Webhook Logging Error]:", logError);
+    }
 
+    if (!rawBody) {
+      return NextResponse.json({ status: "empty_payload" });
+    }
+
+    const body = JSON.parse(rawBody);
     const entry = body.entry?.[0];
     const changes = entry?.changes?.[0];
     const value = changes?.value;
@@ -53,8 +72,19 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ status: "ok" });
-  } catch (error) {
-    console.error("[WhatsApp Webhook]", error);
-    return NextResponse.json({ status: "error" }, { status: 500 });
+  } catch (error: any) {
+    console.error("[WhatsApp Webhook Error]:", error);
+    
+    // Save error state in log if possible
+    try {
+      await prisma.webhookLog.create({
+        data: {
+          payload: JSON.stringify({ error: error.message || error.toString(), rawBody }),
+          headers: "CRASH_LOG",
+        },
+      });
+    } catch {}
+    
+    return NextResponse.json({ status: "error", error: error.message }, { status: 500 });
   }
 }

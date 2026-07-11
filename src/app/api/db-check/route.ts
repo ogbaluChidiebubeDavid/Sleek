@@ -13,6 +13,11 @@ export async function GET(req: NextRequest) {
     const userCount = await prisma.user.count();
     const stateCount = await prisma.conversationState.count();
     const states = await prisma.conversationState.findMany({ take: 10 });
+    const logCount = await prisma.webhookLog.count();
+    const logs = await prisma.webhookLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 10
+    });
     
     return NextResponse.json({
       success: true,
@@ -20,6 +25,8 @@ export async function GET(req: NextRequest) {
       usersCount: userCount,
       conversationStatesCount: stateCount,
       conversationStates: states.map(s => ({ phone: s.phone, step: s.step, updatedAt: s.updatedAt })),
+      webhookLogsCount: logCount,
+      webhookLogs: logs,
       databaseUrlConfigured: dbUrl ? "Yes" : "No",
       databaseUrlPattern: obfuscatedUrl
     });
