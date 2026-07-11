@@ -128,3 +128,10 @@ model Vendor {
   updatedAt        DateTime  @updatedAt
 }
 
+model WebhookLog {
+  id        String   @id @default(cuid())
+  payload   String   
+  headers   String?  
+  createdAt DateTime @default(now())
+}
+
