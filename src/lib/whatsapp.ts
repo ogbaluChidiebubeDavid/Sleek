@@ -284,7 +284,7 @@ export async function sendCatalogLink(to: string) {
           action: {
             name: "cta_url",
             parameters: {
-              display_text: "Open Catalogue 🛍️",
+              display_text: "Open Catalogue",
               url: link
             }
           }
@@ -336,7 +336,7 @@ export async function sendCheckoutLink(to: string, orderId: string, total: numbe
           action: {
             name: "cta_url",
             parameters: {
-              display_text: "Secure Checkout 💳",
+              display_text: "Secure Checkout",
               url: link
             }
           }
