@@ -363,7 +363,7 @@ async function initiateCheckout(phone: string, userId: string) {
   await sendCtaUrlButton(
     phone,
     `Your order for *${cart.items.map((i) => i.product.name).join(", ")}* has been created successfully!\nTotal: ${formatCurrency(total)}`,
-    "Proceed to Secure Checkout",
+    "Secure Checkout",
     link
   );
 }
