@@ -75,7 +75,7 @@ async function getFeaturedProducts(limit = 5) {
   return prisma.product.findMany({
     where: { featured: true },
     take: limit,
-    orderBy: { createdAt: "asc" },
+    orderBy: { createdAt: "desc" },
   });
 }
 
