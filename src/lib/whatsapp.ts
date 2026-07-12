@@ -86,6 +86,13 @@ export async function sendCtaUrlButton(
     return { simulated: true };
   }
 
+  // Fallback check: Meta Cloud API strictly requires HTTPS URLs for CTA interactive buttons.
+  // If we detect http:// (like localhost), we automatically use the text link fallback.
+  if (!url.startsWith("https://")) {
+    console.warn("[WhatsApp] URL must be HTTPS for cta_url. Falling back to text link message:", url);
+    return await sendTextMessage(to, `${bodyText}\n\n👉 *${buttonText}*:\n${url}`);
+  }
+
   const { token, phoneId } = config;
   try {
     const res = await axios.post(
@@ -112,7 +119,9 @@ export async function sendCtaUrlButton(
     return res.data;
   } catch (error: any) {
     console.error("[WhatsApp Send Error - sendCtaUrlButton]:", error.response?.data || error.message);
-    return { error: error.message, details: error.response?.data };
+    // If Meta's API rejects the interactive payload for any reason, deliver via standard text link:
+    console.log("[WhatsApp Fallback] Retrying delivery via standard text link message...");
+    return await sendTextMessage(to, `${bodyText}\n\n👉 *${buttonText}*:\n${url}`);
   }
 }
 

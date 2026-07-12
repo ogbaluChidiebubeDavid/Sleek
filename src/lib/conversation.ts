@@ -102,11 +102,19 @@ export async function handleIncomingMessage(
     return;
   }
 
-  if (normalized === "view_more" || normalized.includes("view more")) {
-    await sendFlowLink(
+  if (
+    normalized === "view_more" || 
+    normalized.includes("view more") || 
+    normalized.includes("add more") ||
+    normalized === "view_catalogue"
+  ) {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const link = `${baseUrl}/catalog?phone=${encodeURIComponent(phone)}`;
+    await sendCtaUrlButton(
       phone,
-      "Explore our full footwear collection, promotions, and save items to your cart.",
-      "/catalog"
+      "Explore our full footwear collection, customize your order, and shop our premium catalogue directly inside WhatsApp.",
+      "Open Catalogue",
+      link
     );
     await setState(phone, "catalog_open", data);
     return;
@@ -120,6 +128,19 @@ export async function handleIncomingMessage(
       await sendTextMessage(phone, "Sorry, that product is no longer available.");
       return;
     }
+
+    if (action === "cart") {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const link = `${baseUrl}/catalog?phone=${encodeURIComponent(phone)}`;
+      await sendCtaUrlButton(
+        phone,
+        `Customize *${product.name}* (select size, color) and add it to your cart. Click below to open our catalogue.`,
+        "Open Catalogue",
+        link
+      );
+      return;
+    }
+
     const colors = parseJsonArray<string>(product.colors);
     const sizes = parseJsonArray<string>(product.sizes);
     await setState(phone, "select_variant", {
@@ -128,7 +149,7 @@ export async function handleIncomingMessage(
     });
     await sendTextMessage(
       phone,
-      `*${product.name}* — ${formatCurrency(product.price)}\n\nReply with:\nColor: ${colors.join(", ")}\nSize: ${sizes.join(", ")}\n\nExample: *Black 42*`
+      `*${product.name}* — ${formatCurrency(product.price)}\n\nReply with your preferred color and size.\n\nExample: *Black 42*`
     );
     return;
   }
