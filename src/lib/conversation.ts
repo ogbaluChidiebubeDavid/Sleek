@@ -8,6 +8,16 @@ import {
   sendCtaUrlButton,
 } from "@/lib/whatsapp";
 
+function getBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return "http://localhost:3000";
+}
+
 type StateData = {
   pendingProductId?: string;
   pendingAction?: "buy" | "cart";
@@ -108,7 +118,7 @@ export async function handleIncomingMessage(
     normalized.includes("add more") ||
     normalized === "view_catalogue"
   ) {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const baseUrl = getBaseUrl();
     const link = `${baseUrl}/catalog?phone=${encodeURIComponent(phone)}`;
     await sendCtaUrlButton(
       phone,
@@ -130,7 +140,7 @@ export async function handleIncomingMessage(
     }
 
     if (action === "cart") {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const baseUrl = getBaseUrl();
       const link = `${baseUrl}/catalog?phone=${encodeURIComponent(phone)}`;
       await sendCtaUrlButton(
         phone,
@@ -347,7 +357,7 @@ async function initiateCheckout(phone: string, userId: string) {
 
   await setState(phone, "checkout", { checkoutOrderId: order.id });
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl = getBaseUrl();
   const link = `${baseUrl}/checkout/${order.id}?phone=${encodeURIComponent(phone)}`;
 
   await sendCtaUrlButton(
