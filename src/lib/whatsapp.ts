@@ -252,105 +252,49 @@ export async function sendTemplateMessage(
 }
 
 export async function sendCatalogLink(to: string) {
-  const config = getConfig();
-  if (!config) {
-    console.warn("[WhatsApp] Missing credentials — sendCatalogLink simulated");
-    return { simulated: true };
-  }
-
-  const { token, phoneId } = config;
   const link = `https://sleek-brown.vercel.app/catalog?phone=${encodeURIComponent(to)}`;
-
   try {
-    const res = await axios.post(
-      `${API_BASE}/${phoneId}/messages`,
-      {
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: to.replace(/\D/g, ""),
-        type: "interactive",
-        interactive: {
-          type: "cta_url",
-          header: {
-            type: "text",
-            text: "Sleek Digital Storefront"
-          },
-          body: {
-            text: "Tap the button below to browse all footwear collections, create your digital wallet, and check out seamlessly without leaving the chat thread."
-          },
-          footer: {
-            text: "Powered by Chain Abstraction"
-          },
-          action: {
-            name: "cta_url",
-            parameters: {
-              display_text: "Open Catalogue",
-              url: link
-            }
-          }
-        }
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return res.data;
-  } catch (error: any) {
-    console.error("[WhatsApp Send Error - sendCatalogLink]:", error.response?.data || error.message);
-    // Fallback: deliver via standard clickable text link
-    return await sendTextMessage(
+    // Try sending approved template in en_US
+    await sendTemplateMessage(to, "3p_direct_integration_test_template", [], [
+      { type: "text", text: `?phone=${encodeURIComponent(to)}` }
+    ]);
+    console.log("[WhatsApp] Sent catalog link via template.");
+  } catch (err) {
+    console.warn("[WhatsApp] Template 3p_direct_integration_test_template failed, falling back to dynamic CTA button.");
+    // Fallback: send dynamic interactive cta_url button
+    await sendCtaUrlButton(
       to,
-      `Explore our full footwear collection, customize your order, and shop our premium catalogue:\n\n👉 *Open Catalogue*:\n${link}`
+      "Explore our full footwear collection, customize your order, and shop our premium catalogue directly inside WhatsApp.",
+      "Open Catalogue",
+      link
     );
   }
 }
 
 export async function sendCheckoutLink(to: string, orderId: string, total: number, itemsNames: string) {
-  const config = getConfig();
-  if (!config) {
-    console.warn("[WhatsApp] Missing credentials — sendCheckoutLink simulated");
-    return { simulated: true };
-  }
-
-  const { token, phoneId } = config;
   const link = `https://sleek-brown.vercel.app/checkout/${orderId}?phone=${encodeURIComponent(to)}`;
-
   try {
-    const res = await axios.post(
-      `${API_BASE}/${phoneId}/messages`,
-      {
-        messaging_product: "whatsapp",
-        recipient_type: "individual",
-        to: to.replace(/\D/g, ""),
-        type: "interactive",
-        interactive: {
-          type: "cta_url",
-          header: {
-            type: "text",
-            text: "Sleek Secure Checkout"
-          },
-          body: {
-            text: `Your order for *${itemsNames}* has been created successfully!\n\nTotal: ₦${total.toLocaleString()}\n\nTap below to complete onboarding, create your crypto wallet, and pay.`
-          },
-          footer: {
-            text: "Powered by Privy & Base Sepolia"
-          },
-          action: {
-            name: "cta_url",
-            parameters: {
-              display_text: "Secure Checkout",
-              url: link
-            }
-          }
-        }
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    return res.data;
-  } catch (error: any) {
-    console.error("[WhatsApp Send Error - sendCheckoutLink]:", error.response?.data || error.message);
-    // Fallback: deliver via standard clickable text link
-    return await sendTextMessage(
+    // Try sending approved template in en_US
+    await sendTemplateMessage(
       to,
-      `Your order for *${itemsNames}* has been created successfully!\nTotal: ₦${total.toLocaleString()}\n\n👉 *Secure Checkout*:\n${link}`
+      "secure_checkout",
+      [
+        { type: "text", text: itemsNames },
+        { type: "text", text: `₦${total.toLocaleString()}` }
+      ],
+      [
+        { type: "text", text: `${orderId}?phone=${encodeURIComponent(to)}` }
+      ]
+    );
+    console.log("[WhatsApp] Sent checkout link via template.");
+  } catch (err) {
+    console.warn("[WhatsApp] Template secure_checkout failed, falling back to dynamic CTA button.");
+    // Fallback: send dynamic interactive cta_url button
+    await sendCtaUrlButton(
+      to,
+      `Your order for *${itemsNames}* has been created successfully!\nTotal: ₦${total.toLocaleString()}`,
+      "Secure Checkout",
+      link
     );
   }
 }
