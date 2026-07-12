@@ -6,6 +6,8 @@ import {
   sendProductCarousel,
   sendFlowLink,
   sendCtaUrlButton,
+  sendCatalogLink,
+  sendCheckoutLink,
 } from "@/lib/whatsapp";
 
 function getBaseUrl(): string {
@@ -118,14 +120,7 @@ export async function handleIncomingMessage(
     normalized.includes("add more") ||
     normalized === "view_catalogue"
   ) {
-    const baseUrl = getBaseUrl();
-    const link = `${baseUrl}/catalog?phone=${encodeURIComponent(phone)}`;
-    await sendCtaUrlButton(
-      phone,
-      "Explore our full footwear collection, customize your order, and shop our premium catalogue directly inside WhatsApp.",
-      "Open Catalogue",
-      link
-    );
+    await sendCatalogLink(phone);
     await setState(phone, "catalog_open", data);
     return;
   }
@@ -140,14 +135,7 @@ export async function handleIncomingMessage(
     }
 
     if (action === "cart") {
-      const baseUrl = getBaseUrl();
-      const link = `${baseUrl}/catalog?phone=${encodeURIComponent(phone)}`;
-      await sendCtaUrlButton(
-        phone,
-        `Customize *${product.name}* (select size, color) and add it to your cart. Click below to open our catalogue.`,
-        "Open Catalogue",
-        link
-      );
+      await sendCatalogLink(phone);
       return;
     }
 
@@ -357,15 +345,7 @@ async function initiateCheckout(phone: string, userId: string) {
 
   await setState(phone, "checkout", { checkoutOrderId: order.id });
 
-  const baseUrl = getBaseUrl();
-  const link = `${baseUrl}/checkout/${order.id}?phone=${encodeURIComponent(phone)}`;
-
-  await sendCtaUrlButton(
-    phone,
-    `Your order for *${cart.items.map((i) => i.product.name).join(", ")}* has been created successfully!\nTotal: ${formatCurrency(total)}`,
-    "Secure Checkout",
-    link
-  );
+  await sendCheckoutLink(phone, order.id, total, cart.items.map((i) => i.product.name).join(", "));
 }
 
 export async function handleTracking(phone: string, trackingNumber: string) {
