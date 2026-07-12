@@ -16,6 +16,9 @@ import {
   ChevronRight,
   Loader2,
   Lock,
+  Copy,
+  Check,
+  ChevronDown,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { SleekLogo } from "@/components/brand/SleekLogo";
@@ -81,6 +84,18 @@ export default function VendorDashboard() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawTxHash, setWithdrawTxHash] = useState<string | null>(null);
+
+  // Copy & Dropdown states
+  const [copied, setCopied] = useState<Record<string, boolean>>({});
+  const [showAssetDropdown, setShowAssetDropdown] = useState(false);
+
+  const handleCopy = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied((prev) => ({ ...prev, [key]: true }));
+    setTimeout(() => {
+      setCopied((prev) => ({ ...prev, [key]: false }));
+    }, 2000);
+  };
 
   useEffect(() => {
     // Authenticate using localStorage
@@ -281,24 +296,76 @@ export default function VendorDashboard() {
             </h1>
             <p className="text-sm text-gray-400 mt-1">{vendorInfo?.email}</p>
           </div>
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-col items-end gap-1 relative">
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
               On-Chain Wallet
             </span>
-            <div className="flex items-center gap-2 rounded-lg bg-black/40 px-3 py-1.5 border border-white/5 text-xs font-mono text-sleek-300">
-              <Wallet className="h-4 w-4 text-sleek-400 shrink-0" />
-              <span>{vendorInfo?.walletAddress ? `${vendorInfo.walletAddress.slice(0, 8)}...${vendorInfo.walletAddress.slice(-8)}` : "0x00...00"}</span>
+            <div className="flex items-center gap-2">
+              <div
+                onClick={() => setShowAssetDropdown(!showAssetDropdown)}
+                className="flex items-center gap-1.5 rounded-lg bg-black/40 px-3 py-1.5 border border-white/5 text-xs font-mono text-sleek-300 cursor-pointer hover:bg-white/[0.03] hover:border-white/10 transition select-none"
+              >
+                <Wallet className="h-3.5 w-3.5 text-sleek-400 shrink-0" />
+                <span>{vendorInfo?.walletAddress ? `${vendorInfo.walletAddress.slice(0, 8)}...${vendorInfo.walletAddress.slice(-8)}` : "0x00...00"}</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-gray-500 transition-transform ${showAssetDropdown ? "rotate-180" : ""}`} />
+              </div>
+
+              {vendorInfo?.walletAddress && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopy(vendorInfo.walletAddress, "header-addr");
+                  }}
+                  className="p-1.5 bg-white/5 border border-white/10 rounded-lg hover:text-white text-gray-400 transition"
+                  title="Copy Wallet Address"
+                >
+                  {copied["header-addr"] ? (
+                    <Check className="h-3.5 w-3.5 text-green-400" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              )}
             </div>
+
+            {showAssetDropdown && vendorInfo?.walletAddress && (
+              <div className="absolute right-0 top-full mt-2 w-56 bg-[#0c1015] border border-white/10 rounded-2xl p-4 shadow-2xl z-50 animate-fadeIn space-y-3 text-left">
+                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Balances</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-white font-medium flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-sleek-400" /> Base ETH
+                    </span>
+                    <span className="font-mono text-sleek-300 font-semibold">{parseFloat(vendorInfo.balance || 0).toFixed(4)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-400 flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-blue-500" /> USDC
+                    </span>
+                    <span className="font-mono text-gray-500">0.0000</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-400 flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-green-500" /> USDT
+                    </span>
+                    <span className="font-mono text-gray-500">0.0000</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* STATS TILES CARD GRID */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
-            <span className="text-gray-500 text-xs font-semibold block uppercase">Total Revenue</span>
-            <p className="text-2xl font-bold mt-1 text-white font-mono">{formatCurrency(totalRevenue)}</p>
+            <span className="text-gray-500 text-xs font-semibold block uppercase">Total Balance (Naira)</span>
+            <p className="text-2xl font-bold mt-1 text-white font-mono">
+              {formatCurrency(parseFloat(vendorInfo?.balance || 0) * 3500000)}
+            </p>
             <span className="text-[10px] text-green-400 font-medium flex items-center gap-1 mt-2">
-              <TrendingUp className="h-3 w-3" /> Paid Orders
+              <TrendingUp className="h-3 w-3" /> Order Revenue: {formatCurrency(totalRevenue)}
             </span>
           </div>
 
@@ -308,6 +375,9 @@ export default function VendorDashboard() {
               <p className="text-2xl font-bold mt-1 text-sleek-300 font-mono">
                 {vendorInfo?.balance || "0.0"} <span className="text-xs font-sans font-medium text-gray-400">ETH</span>
               </p>
+              <span className="text-[11px] text-gray-400 block mt-1">
+                ~${(parseFloat(vendorInfo?.balance || 0) * 3000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+              </span>
             </div>
             <div className="mt-4 flex flex-col gap-2">
               <button
