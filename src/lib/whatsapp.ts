@@ -254,10 +254,10 @@ export async function sendTemplateMessage(
 export async function sendCatalogLink(to: string) {
   const link = `https://sleek-brown.vercel.app/catalog?phone=${encodeURIComponent(to)}`;
   try {
-    // Try sending pre-approved template "open_catalog"
+    // Try sending pre-approved template "3p_direct_integration_test_template"
     // Parameters:
     // - Button dynamic parameter index 0: to
-    await sendTemplateMessage(to, "open_catalog", [], [
+    await sendTemplateMessage(to, "3p_direct_integration_test_template", [], [
       { type: "text", text: `?phone=${encodeURIComponent(to)}` }
     ]);
     console.log("[WhatsApp] Sent catalog link via template.");
