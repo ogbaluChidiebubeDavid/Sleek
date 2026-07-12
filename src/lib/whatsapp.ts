@@ -186,10 +186,8 @@ export async function sendProductCarousel(
     }
   }
 
-  await sendInteractiveButtons(to, "Browse our full catalogue or checkout:", [
+  await sendInteractiveButtons(to, "Browse our full catalogue:", [
     { id: "view_more", title: "View more" },
-    { id: "checkout", title: "Checkout" },
-    { id: "track_order", title: "Track order" },
   ]);
 
   return { sent: true };

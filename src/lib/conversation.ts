@@ -12,10 +12,10 @@ function getBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_APP_URL) {
     return process.env.NEXT_PUBLIC_APP_URL;
   }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  return "http://localhost:3000";
+  // Hardcode the public production Vercel domain as the default fallback
+  // This bypasses Vercel's login protection wall placed on preview deployments,
+  // allowing Meta Cloud API to crawl/validate links and deliver native buttons!
+  return "https://sleek-brown.vercel.app";
 }
 
 type StateData = {
