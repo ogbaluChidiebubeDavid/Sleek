@@ -41,7 +41,10 @@ export async function POST(req: NextRequest) {
 
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
-      data: { status },
+      data: { 
+        status,
+        shipping_status: status
+      },
     });
 
     // Send notifications to the user on real WhatsApp if status changes to Shipped/Delivered

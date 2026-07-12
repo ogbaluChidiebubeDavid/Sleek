@@ -74,6 +74,48 @@ export async function sendInteractiveButtons(
   }
 }
 
+export async function sendCtaUrlButton(
+  to: string,
+  bodyText: string,
+  buttonText: string,
+  url: string
+) {
+  const config = getConfig();
+  if (!config) {
+    console.warn("[WhatsApp] Missing credentials — CTA URL not sent");
+    return { simulated: true };
+  }
+
+  const { token, phoneId } = config;
+  try {
+    const res = await axios.post(
+      `${API_BASE}/${phoneId}/messages`,
+      {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: to.replace(/\D/g, ""),
+        type: "interactive",
+        interactive: {
+          type: "cta_url",
+          body: { text: bodyText },
+          action: {
+            name: "cta_url",
+            parameters: {
+              display_text: buttonText,
+              url: url,
+            },
+          },
+        },
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return res.data;
+  } catch (error: any) {
+    console.error("[WhatsApp Send Error - sendCtaUrlButton]:", error.response?.data || error.message);
+    return { error: error.message, details: error.response?.data };
+  }
+}
+
 export async function sendProductCarousel(
   to: string,
   introText: string,

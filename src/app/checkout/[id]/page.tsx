@@ -290,7 +290,21 @@ function CheckoutContent() {
       }
 
       setPaymentStatus("success");
-      router.push(`/checkout/success?orderId=${orderId}`);
+
+      // Auto-exit webview using deep-linking back to WhatsApp chat
+      const waNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "2348146272564";
+      const deepLink = `whatsapp://send?phone=${waNumber}&text=track%20${order.trackingNumber}`;
+      
+      try {
+        window.location.href = deepLink;
+      } catch (err) {
+        console.error("Deep link redirect failed:", err);
+      }
+
+      // Proceed to success page as a secondary backup/confirmation view
+      setTimeout(() => {
+        router.push(`/checkout/success?orderId=${orderId}`);
+      }, 800);
     } catch (error: any) {
       console.error("[Checkout Payment Error]", error);
       setPaymentStatus("error");
@@ -637,9 +651,12 @@ function CheckoutContent() {
               // BALANCES ARE SUFFICIENT - PROCEED TO TRANSACTION ROUTING
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <Wallet className="h-4 w-4 text-[#00c980]" /> Allocated Client Wallet
+                  <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-[#00c980]" /> Privy/Dynamic Embedded Wallet
                   </h3>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Your email-linked smart account has been dynamically initialized on Base Sepolia.
+                  </p>
 
                   {/* Wallet Info Card */}
                   <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.03] to-transparent p-5 space-y-4">

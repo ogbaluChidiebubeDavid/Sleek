@@ -5,6 +5,7 @@ import {
   sendInteractiveButtons,
   sendProductCarousel,
   sendFlowLink,
+  sendCtaUrlButton,
 } from "@/lib/whatsapp";
 
 type StateData = {
@@ -326,16 +327,14 @@ async function initiateCheckout(phone: string, userId: string) {
   await setState(phone, "checkout", { checkoutOrderId: order.id });
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  await sendTextMessage(
-    phone,
-    `*Checkout*\nTotal: ${formatCurrency(total)}\nTracking (after payment): *${order.trackingNumber}*\n\nPay securely: ${baseUrl}/checkout/${order.id}?phone=${encodeURIComponent(phone)}\n\nOptions: Opay • Crypto (Cryptomus) • Flutterwave • Paystack`
-  );
+  const link = `${baseUrl}/checkout/${order.id}?phone=${encodeURIComponent(phone)}`;
 
-  await sendInteractiveButtons(phone, "Choose how you'd like to pay:", [
-    { id: `pay_opay_${order.id}`, title: "Pay with Opay" },
-    { id: `pay_crypto_${order.id}`, title: "Pay with Crypto" },
-    { id: `pay_card_${order.id}`, title: "Card / Transfer" },
-  ]);
+  await sendCtaUrlButton(
+    phone,
+    `Your order for *${cart.items.map((i) => i.product.name).join(", ")}* has been created successfully!\nTotal: ${formatCurrency(total)}`,
+    "Proceed to Secure Checkout",
+    link
+  );
 }
 
 export async function handleTracking(phone: string, trackingNumber: string) {
