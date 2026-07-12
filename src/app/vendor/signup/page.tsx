@@ -14,6 +14,14 @@ export default function VendorSignup() {
 
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [kycIdImage, setKycIdImage] = useState<string | null>(null);
+  
+  // Auth Mode Toggles
+  const [isLoginMode, setIsLoginMode] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Signup steps: 'info', 'kyc', 'completed'
   const [step, setStep] = useState<"info" | "kyc" | "completed">("info");
@@ -113,9 +121,33 @@ export default function VendorSignup() {
     }
   };
 
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginEmail || !loginPassword) return;
+    setIsLoggingIn(true);
+    try {
+      const res = await fetch("/api/vendor/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+      localStorage.setItem("sleek_vendor_id", data.vendor.id);
+      localStorage.setItem("sleek_vendor_business", data.vendor.businessName);
+      router.push("/vendor/dashboard");
+    } catch (err: any) {
+      alert(err.message || "Failed to log in.");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
   const handleInfoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!businessName || !email) return;
+    if (!businessName || !email || !password) return;
     setStep("kyc");
     startCamera();
   };
@@ -126,6 +158,10 @@ export default function VendorSignup() {
   };
 
   const submitRegistration = async () => {
+    if (!kycIdImage) {
+      alert("Please upload your government ID card to complete KYC verification.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       const response = await fetch("/api/vendor/signup", {
@@ -134,7 +170,9 @@ export default function VendorSignup() {
         body: JSON.stringify({
           businessName,
           email,
+          password,
           kycFaceImage: capturedImage,
+          kycIdImage,
         }),
       });
 
@@ -183,55 +221,137 @@ export default function VendorSignup() {
             <div className={`h-1 flex-1 rounded ${step === "completed" ? "bg-sleek-500" : "bg-white/10"}`} />
           </div>
 
-          {/* STEP 1: INFO FORM */}
+          {/* STEP 1: INFO FORM OR LOGIN FORM */}
           {step === "info" && (
             <div>
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-sleek-400 to-sleek-200 bg-clip-text text-transparent mb-2">
-                Sell via WhatsApp
-              </h2>
-              <p className="text-sm text-gray-400 mb-6">
-                Register as an accredited footwear vendor. Receive instant crypto payments directly to your generated wallet.
-              </p>
-
-              <form onSubmit={handleInfoSubmit} className="space-y-4">
+              {isLoginMode ? (
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1.5 font-semibold">Business Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="April Footwear"
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3 text-sm focus:border-sleek-500 outline-none transition"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1.5 font-semibold">Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="april@footwear.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3 text-sm focus:border-sleek-500 outline-none transition"
-                  />
-                </div>
-
-                <div className="flex gap-2.5 items-start rounded-xl bg-sleek-500/10 border border-sleek-500/20 p-3 text-xs text-sleek-300">
-                  <Shield className="h-4 w-4 shrink-0 mt-0.5" />
-                  <p>
-                    Your business email will generate a unique EVM wallet address to handle and route payments. Face KYC liveness verification is required.
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-sleek-400 to-sleek-200 bg-clip-text text-transparent mb-2">
+                    Vendor Log In
+                  </h2>
+                  <p className="text-sm text-gray-400 mb-6">
+                    Log in to your store dashboard to manage products, view customer payments, and update order shipping details.
                   </p>
-                </div>
 
-                <button
-                  type="submit"
-                  className="w-full rounded-xl bg-sleek-500 py-3.5 font-bold text-white text-sm hover:bg-sleek-600 transition flex items-center justify-center gap-2 mt-6 active:scale-[0.98] shadow-lg shadow-sleek-500/25"
-                >
-                  Continue to KYC Check <ArrowRight className="h-4 w-4" />
-                </button>
-              </form>
+                  <form onSubmit={handleLoginSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5 font-semibold">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="april@footwear.com"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3 text-sm focus:border-sleek-500 outline-none transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5 font-semibold">Password</label>
+                      <input
+                        type="password"
+                        required
+                        placeholder="••••••••"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3 text-sm focus:border-sleek-500 outline-none transition"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isLoggingIn}
+                      className="w-full rounded-xl bg-sleek-500 py-3.5 font-bold text-white text-sm hover:bg-sleek-600 transition flex items-center justify-center gap-2 mt-6 active:scale-[0.98] shadow-lg shadow-sleek-500/25"
+                    >
+                      {isLoggingIn && <Loader2 className="h-3 w-3 animate-spin text-white" />}
+                      Log In to Dashboard <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </form>
+
+                  <div className="mt-6 text-center text-xs">
+                    <span className="text-gray-500">Need a vendor account? </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsLoginMode(false)}
+                      className="text-sleek-400 hover:text-sleek-300 font-semibold transition"
+                    >
+                      Sign Up
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-sleek-400 to-sleek-200 bg-clip-text text-transparent mb-2">
+                    Sell via WhatsApp
+                  </h2>
+                  <p className="text-sm text-gray-400 mb-6">
+                    Register as an accredited footwear vendor. Receive instant crypto payments directly to your generated wallet.
+                  </p>
+
+                  <form onSubmit={handleInfoSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5 font-semibold">Business Name</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="April Footwear"
+                        value={businessName}
+                        onChange={(e) => setBusinessName(e.target.value)}
+                        className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3 text-sm focus:border-sleek-500 outline-none transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5 font-semibold">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="april@footwear.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3 text-sm focus:border-sleek-500 outline-none transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5 font-semibold">Password</label>
+                      <input
+                        type="password"
+                        required
+                        placeholder="Create a strong password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3 text-sm focus:border-sleek-500 outline-none transition"
+                      />
+                    </div>
+
+                    <div className="flex gap-2.5 items-start rounded-xl bg-sleek-500/10 border border-sleek-500/20 p-3 text-xs text-sleek-300">
+                      <Shield className="h-4 w-4 shrink-0 mt-0.5" />
+                      <p>
+                        Your business email will generate a unique EVM wallet address to handle and route payments. Face KYC liveness verification is required.
+                      </p>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full rounded-xl bg-sleek-500 py-3.5 font-bold text-white text-sm hover:bg-sleek-600 transition flex items-center justify-center gap-2 mt-6 active:scale-[0.98] shadow-lg shadow-sleek-500/25"
+                    >
+                      Continue to KYC Check <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </form>
+
+                  <div className="mt-6 text-center text-xs">
+                    <span className="text-gray-500">Already have a vendor account? </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsLoginMode(true)}
+                      className="text-sleek-400 hover:text-sleek-300 font-semibold transition"
+                    >
+                      Log In
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -319,6 +439,44 @@ export default function VendorSignup() {
                     <div className="flex gap-2 items-center justify-center text-xs text-green-400 font-semibold mb-2">
                       <CheckCircle className="h-4 w-4" /> KYC Liveness Verified Successfully
                     </div>
+
+                    {/* Government ID card file upload */}
+                    <div className="border border-white/10 rounded-2xl p-4 bg-white/[0.01] text-left mb-4">
+                      <label className="block text-xs text-gray-400 mb-2 font-semibold">
+                        Upload Government ID Card (License, National ID, Passport)
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          required
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setKycIdImage(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="hidden"
+                          id="kyc-id-upload"
+                        />
+                        <label
+                          htmlFor="kyc-id-upload"
+                          className="cursor-pointer rounded-xl bg-white/10 border border-white/10 px-4 py-2.5 text-xs font-semibold hover:bg-white/15 transition select-none"
+                        >
+                          {kycIdImage ? "Change ID Card Image" : "Choose ID Card Image"}
+                        </label>
+                        {kycIdImage && (
+                          <span className="text-xs text-green-400 font-medium truncate flex items-center gap-1">
+                            <CheckCircle className="h-3.5 w-3.5 shrink-0" /> ID Attached
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="flex gap-3">
                       <button
                         type="button"
@@ -330,7 +488,7 @@ export default function VendorSignup() {
                       <button
                         type="button"
                         onClick={submitRegistration}
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || !kycIdImage}
                         className="flex-1 rounded-xl bg-sleek-500 py-3 font-bold text-white text-xs hover:bg-sleek-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-lg shadow-sleek-500/25"
                       >
                         {isSubmitting && <Loader2 className="h-3 w-3 animate-spin text-white" />}

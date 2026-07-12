@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createNewWallet } from "@/lib/blockchain";
+import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, businessName, kycFaceImage } = await req.json();
+    const { email, businessName, kycFaceImage, password, kycIdImage } = await req.json();
 
-    if (!email || !businessName) {
-      return NextResponse.json({ error: "Email and Business Name are required" }, { status: 400 });
+    if (!email || !businessName || !password) {
+      return NextResponse.json({ error: "Email, Business Name, and Password are required" }, { status: 400 });
     }
 
     // Check if email already registered
@@ -19,17 +20,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email already registered as a vendor" }, { status: 400 });
     }
 
-    // Create wallet for vendor
+    // Create wallet for vendor (chain abstraction)
     const wallet = createNewWallet();
+
+    // Hash the password with SHA-256
+    const hashedPassword = crypto.createHash("sha256").update(password).digest("hex");
 
     const vendor = await prisma.vendor.create({
       data: {
         email,
         businessName,
+        password: hashedPassword,
         walletAddress: wallet.address,
         walletPrivateKey: wallet.privateKey,
-        kycStatus: "verified", // Face liveness check is client-verified, we mark verified
+        kycStatus: "verified", // Completed both face scan and ID upload, we mark as verified
         kycFaceImage,
+        kycIdImage,
       },
     });
 

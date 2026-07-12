@@ -75,6 +75,13 @@ export default function VendorDashboard() {
   const [newProductSizes, setNewProductSizes] = useState("40, 41, 42, 43, 44");
   const [isAddingProduct, setIsAddingProduct] = useState(false);
 
+  // Withdraw Modal states
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAddress, setWithdrawAddress] = useState("");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [withdrawTxHash, setWithdrawTxHash] = useState<string | null>(null);
+
   useEffect(() => {
     // Authenticate using localStorage
     const savedId = localStorage.getItem("sleek_vendor_id");
@@ -158,6 +165,37 @@ export default function VendorDashboard() {
       alert("Something went wrong");
     } finally {
       setIsAddingProduct(false);
+    }
+  };
+
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendorId || !withdrawAddress || !withdrawAmount) return;
+    setIsWithdrawing(true);
+    setWithdrawTxHash(null);
+    try {
+      const res = await fetch("/api/vendor/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vendorId,
+          toAddress: withdrawAddress,
+          amountEth: withdrawAmount,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Withdrawal failed");
+      }
+      setWithdrawTxHash(data.txHash);
+      setWithdrawAddress("");
+      setWithdrawAmount("");
+      // Reload dashboard data
+      fetchData(vendorId);
+    } catch (err: any) {
+      alert(err.message || "Failed to execute withdrawal.");
+    } finally {
+      setIsWithdrawing(false);
     }
   };
 
@@ -264,14 +302,24 @@ export default function VendorDashboard() {
             </span>
           </div>
 
-          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
-            <span className="text-gray-500 text-xs font-semibold block uppercase">Wallet Balance</span>
-            <p className="text-2xl font-bold mt-1 text-sleek-300 font-mono">
-              {vendorInfo?.balance || "0.0"} <span className="text-xs font-sans font-medium text-gray-400">ETH</span>
-            </p>
-            <span className="text-[10px] text-gray-500 font-medium block mt-2">
-              Base Sepolia Testnet
-            </span>
+          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <span className="text-gray-500 text-xs font-semibold block uppercase">Wallet Balance</span>
+              <p className="text-2xl font-bold mt-1 text-sleek-300 font-mono">
+                {vendorInfo?.balance || "0.0"} <span className="text-xs font-sans font-medium text-gray-400">ETH</span>
+              </p>
+            </div>
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                onClick={() => setShowWithdrawModal(true)}
+                className="w-full rounded-xl bg-sleek-500/10 hover:bg-sleek-500/20 border border-sleek-500/30 py-2 text-xs font-bold text-sleek-300 hover:text-white transition active:scale-95"
+              >
+                Withdraw Funds
+              </button>
+              <span className="text-[9px] text-gray-500 text-center font-medium block">
+                Base Sepolia Testnet
+              </span>
+            </div>
           </div>
 
           <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
@@ -553,6 +601,81 @@ export default function VendorDashboard() {
           </div>
         </div>
       </main>
+      {/* Withdraw Modal Overlay */}
+      {showWithdrawModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 z-50 animate-fadeIn">
+          <div className="w-full max-w-md bg-[#0b0f14] border border-white/10 rounded-3xl p-6 relative overflow-hidden shadow-2xl">
+            <h3 className="text-xl font-bold bg-gradient-to-r from-sleek-400 to-sleek-200 bg-clip-text text-transparent mb-2">
+              Withdraw Funds
+            </h3>
+            <p className="text-xs text-gray-400 mb-6">
+              Transfer base Sepolia ETH from your shop wallet directly to any external Web3 address.
+            </p>
+
+            <form onSubmit={handleWithdraw} className="space-y-4">
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-1.5 font-bold uppercase">Destination Address</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="0x..."
+                  value={withdrawAddress}
+                  onChange={(e) => setWithdrawAddress(e.target.value)}
+                  className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3 text-xs font-mono focus:border-sleek-500 outline-none transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-1.5 font-bold uppercase">Amount (ETH)</label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  placeholder="0.005"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3 text-xs font-mono focus:border-sleek-500 outline-none transition"
+                />
+              </div>
+
+              {withdrawTxHash && (
+                <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-3.5 text-xs text-green-400">
+                  <p className="font-semibold mb-1">Transfer submitted successfully!</p>
+                  <a
+                    href={`https://sepolia.basescan.org/tx/${withdrawTxHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-mono hover:underline flex items-center gap-1 mt-1 text-[11px]"
+                  >
+                    View Tx on Basescan <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWithdrawModal(false);
+                    setWithdrawTxHash(null);
+                  }}
+                  className="flex-1 rounded-xl border border-white/10 py-3 text-xs font-semibold hover:bg-white/5 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isWithdrawing}
+                  className="flex-1 rounded-xl bg-sleek-500 py-3 font-bold text-white text-xs hover:bg-sleek-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-lg shadow-sleek-500/25"
+                >
+                  {isWithdrawing && <Loader2 className="h-3 w-3 animate-spin text-white" />}
+                  Execute Transfer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="text-center text-[10px] text-gray-600 border-t border-white/5 py-6 mt-12 bg-white/[0.01]">

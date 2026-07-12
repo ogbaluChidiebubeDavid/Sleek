@@ -96,3 +96,22 @@ export async function executeSplitPayment(
     receipt,
   };
 }
+
+export async function withdrawFunds(
+  vendorPrivateKey: string,
+  toAddress: string,
+  amountEth: string
+): Promise<string> {
+  const provider = getProvider();
+  const wallet = new ethers.Wallet(vendorPrivateKey, provider);
+  
+  console.log(`[Blockchain] Vendor withdrawing ${amountEth} ETH to ${toAddress}...`);
+  const tx = await wallet.sendTransaction({
+    to: toAddress,
+    value: ethers.parseEther(amountEth),
+  });
+  
+  await tx.wait();
+  console.log(`[Blockchain] Vendor withdrawal successful: ${tx.hash}`);
+  return tx.hash;
+}

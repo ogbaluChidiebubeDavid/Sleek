@@ -122,6 +122,7 @@ model Vendor {
   walletPrivateKey String
   kycStatus        String    @default("pending") // pending, verified
   kycFaceImage     String?
+  kycIdImage       String?
   products         Product[]
   orders           Order[]
   createdAt        DateTime  @default(now())
