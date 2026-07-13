@@ -35,3 +35,17 @@ export function getWhatsAppLink(message?: string) {
     message || "Hello, I want to buy footwear"
   );
   return `https://wa.me/${phone.replace(/\D/g, "")}?text=${text}`;}
+
+export function getDirectImageUrl(url: string): string {
+  if (!url) return "";
+  // Check if it is a Google Drive share link
+  if (url.includes("drive.google.com")) {
+    const fileDMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    const fileId = (fileDMatch && fileDMatch[1]) || (idMatch && idMatch[1]);
+    if (fileId) {
+      return `https://lh3.googleusercontent.com/d/${fileId}`;
+    }
+  }
+  return url;
+}

@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { formatCurrency, getWhatsAppLink } from "@/lib/utils";
+import { formatCurrency, getWhatsAppLink, getDirectImageUrl } from "@/lib/utils";
 import { ShoppingCart, X, UserPlus } from "lucide-react";
 
 type Product = {
@@ -181,7 +181,7 @@ function CatalogContent() {
               className="rounded-2xl border border-white/5 bg-[#1f2c34]/80 backdrop-blur-sm overflow-hidden flex flex-col justify-between shadow-lg"
             >
               <div className="relative h-40 bg-[#141d26]">
-                <Image src={p.imageUrl} alt={p.name} fill className="object-cover transition-transform duration-300 hover:scale-105" unoptimized />
+                <Image src={getDirectImageUrl(p.imageUrl)} alt={p.name} fill className="object-cover transition-transform duration-300 hover:scale-105" unoptimized />
                 
                 {/* Brand Badge */}
                 <span className="absolute left-2 top-2 rounded bg-[#0b141a]/85 border border-[#25D366]/30 px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider text-[#25D366]">
@@ -305,7 +305,7 @@ function CatalogContent() {
                     <li key={idx} className="flex gap-3 text-sm">
                       <div className="relative h-14 w-14 rounded overflow-hidden shrink-0">
                         <Image
-                          src={item.product.imageUrl}
+                          src={getDirectImageUrl(item.product.imageUrl)}
                           alt=""
                           fill
                           className="object-cover"

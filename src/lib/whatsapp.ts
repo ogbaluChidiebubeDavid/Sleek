@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getDirectImageUrl } from "./utils";
 
 const API_BASE = "https://graph.facebook.com/v21.0";
 
@@ -159,7 +160,7 @@ export async function sendProductCarousel(
             type: "button",
             header: {
               type: "image",
-              image: { link: product.imageUrl },
+              image: { link: getDirectImageUrl(product.imageUrl) },
             },
             body: {
               text: `${product.name}\n₦${product.price.toLocaleString()}${colorText}${sizeText}`,
