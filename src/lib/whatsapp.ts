@@ -207,7 +207,8 @@ export async function sendTemplateMessage(
   to: string,
   templateName: string,
   parameters: any[],
-  buttonParameters: any[] = []
+  buttonParameters: any[] = [],
+  languageCode = "en"
 ) {
   const config = getConfig();
   if (!config) return { simulated: true };
@@ -239,7 +240,7 @@ export async function sendTemplateMessage(
         type: "template",
         template: {
           name: templateName,
-          language: { code: "en_US" },
+          language: { code: languageCode },
           components: components,
         },
       },
