@@ -256,13 +256,13 @@ export async function sendTemplateMessage(
 export async function sendCatalogLink(to: string) {
   const link = `https://sleek-brown.vercel.app/catalog?phone=${encodeURIComponent(to)}`;
   try {
-    // Try sending approved template in en_US
-    await sendTemplateMessage(to, "open_catalogue", [], [
+    // Try sending approved template in en
+    await sendTemplateMessage(to, "open_catalog", [], [
       { type: "text", text: `?phone=${encodeURIComponent(to)}` }
     ]);
     console.log("[WhatsApp] Sent catalog link via template.");
   } catch (err) {
-    console.warn("[WhatsApp] Template open_catalogue failed, falling back to dynamic CTA button.");
+    console.warn("[WhatsApp] Template open_catalog failed, falling back to dynamic CTA button.");
     // Fallback: send dynamic interactive cta_url button
     await sendCtaUrlButton(
       to,
