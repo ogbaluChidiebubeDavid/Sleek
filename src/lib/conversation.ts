@@ -80,19 +80,7 @@ async function getFeaturedProducts(limit = 5) {
 }
 
 export async function sendCatalogueGreeting(phone: string) {
-  const products = await getFeaturedProducts(5);
-  await sendProductCarousel(
-    phone,
-    "Check our catalogue and choose your preferred footwear 🛍️",
-    products.map((p) => ({
-      id: p.id,
-      name: p.name,
-      price: p.price,
-      imageUrl: p.imageUrl,
-      colors: parseJsonArray<string>(p.colors),
-      sizes: parseJsonArray<string>(p.sizes),
-    }))
-  );
+  await sendCatalogLink(phone);
   await setState(phone, "browsing", {});
 }
 
