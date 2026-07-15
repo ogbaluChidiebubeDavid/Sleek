@@ -4,7 +4,7 @@ import { generateTrackingNumber } from "@/lib/utils";
 import { sendInteractiveButtons } from "@/lib/whatsapp";
 
 export async function POST(req: NextRequest) {
-  const { phone } = await req.json();
+  const { phone, selectedItems } = await req.json();
   if (!phone) {
     return NextResponse.json({ error: "phone required" }, { status: 400 });
   }
@@ -20,7 +20,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
   }
 
-  const total = user.cart.items.reduce(
+  // Filter items if selectedItems is provided
+  let itemsToCheckout = user.cart.items;
+  if (Array.isArray(selectedItems) && selectedItems.length > 0) {
+    itemsToCheckout = user.cart.items.filter((item) =>
+      selectedItems.some(
+        (sel) =>
+          sel.productId === item.productId &&
+          sel.color === item.color &&
+          sel.size === item.size
+      )
+    );
+  }
+
+  if (itemsToCheckout.length === 0) {
+    return NextResponse.json({ error: "No selected items found in cart" }, { status: 400 });
+  }
+
+  const total = itemsToCheckout.reduce(
     (sum, i) => sum + i.product.price * i.quantity,
     0
   );
@@ -32,7 +49,7 @@ export async function POST(req: NextRequest) {
       totalAmount: total,
       status: "awaiting_payment",
       items: {
-        create: user.cart.items.map((i) => ({
+        create: itemsToCheckout.map((i) => ({
           productId: i.productId,
           name: i.product.name,
           color: i.color,
@@ -41,6 +58,14 @@ export async function POST(req: NextRequest) {
           price: i.product.price,
         })),
       },
+    },
+  });
+
+  // Delete checked out items from CartItem table
+  const itemIdsToDelete = itemsToCheckout.map((i) => i.id);
+  await prisma.cartItem.deleteMany({
+    where: {
+      id: { in: itemIdsToDelete },
     },
   });
 

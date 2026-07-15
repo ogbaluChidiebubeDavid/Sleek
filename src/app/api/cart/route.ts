@@ -10,6 +10,21 @@ const addSchema = z.object({
   quantity: z.number().int().positive().optional(),
 });
 
+const patchSchema = z.object({
+  phone: z.string().min(8),
+  productId: z.string(),
+  color: z.string(),
+  size: z.string(),
+  quantity: z.number().int().positive(),
+});
+
+const deleteSchema = z.object({
+  phone: z.string().min(8),
+  productId: z.string(),
+  color: z.string(),
+  size: z.string(),
+});
+
 async function ensureUser(phone: string) {
   let user = await prisma.user.findUnique({ where: { phone } });
   if (!user) {
@@ -62,4 +77,53 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json({ item });
+}
+
+export async function PATCH(req: NextRequest) {
+  const parsed = patchSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const { phone, productId, color, size, quantity } = parsed.data;
+  const user = await ensureUser(phone);
+  const cart = await prisma.cart.findUniqueOrThrow({ where: { userId: user.id } });
+
+  const item = await prisma.cartItem.update({
+    where: {
+      cartId_productId_color_size: {
+        cartId: cart.id,
+        productId,
+        color,
+        size,
+      },
+    },
+    data: { quantity },
+  });
+
+  return NextResponse.json({ item });
+}
+
+export async function DELETE(req: NextRequest) {
+  const parsed = deleteSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const { phone, productId, color, size } = parsed.data;
+  const user = await ensureUser(phone);
+  const cart = await prisma.cart.findUniqueOrThrow({ where: { userId: user.id } });
+
+  await prisma.cartItem.delete({
+    where: {
+      cartId_productId_color_size: {
+        cartId: cart.id,
+        productId,
+        color,
+        size,
+      },
+    },
+  });
+
+  return NextResponse.json({ success: true });
 }
