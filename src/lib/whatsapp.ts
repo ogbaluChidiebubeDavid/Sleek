@@ -208,7 +208,8 @@ export async function sendTemplateMessage(
   templateName: string,
   parameters: any[],
   buttonParameters: any[] = [],
-  languageCode = "en"
+  languageCode = "en",
+  headerParameters: any[] = []
 ) {
   const config = getConfig();
   if (!config) return { simulated: true };
@@ -216,6 +217,12 @@ export async function sendTemplateMessage(
   const { token, phoneId } = config;
   try {
     const components: any[] = [];
+    if (headerParameters.length > 0) {
+      components.push({
+        type: "header",
+        parameters: headerParameters,
+      });
+    }
     if (parameters.length > 0) {
       components.push({
         type: "body",
@@ -255,14 +262,32 @@ export async function sendTemplateMessage(
 
 export async function sendCatalogLink(to: string) {
   const link = `https://sleek-brown.vercel.app/catalog?phone=${encodeURIComponent(to)}`;
+  // Meta's API requires a publicly accessible image URL to render the template header.
+  // Using the production Vercel URL ensures it succeeds even when local tunnels are offline.
+  const imageUrl = "https://sleek-brown.vercel.app/footwear-suede.jpg";
+
   try {
-    // Try sending approved template in en
-    await sendTemplateMessage(to, "open_catalog", [], [
-      { type: "text", text: `?phone=${encodeURIComponent(to)}` }
-    ]);
+    // Try sending approved template with image header in en
+    await sendTemplateMessage(
+      to,
+      "open_catalogue",
+      [],
+      [
+        { type: "text", text: `?phone=${encodeURIComponent(to)}` }
+      ],
+      "en",
+      [
+        {
+          type: "image",
+          image: {
+            link: imageUrl
+          }
+        }
+      ]
+    );
     console.log("[WhatsApp] Sent catalog link via template.");
   } catch (err) {
-    console.warn("[WhatsApp] Template open_catalog failed, falling back to dynamic CTA button.");
+    console.warn("[WhatsApp] Template open_catalogue failed, falling back to dynamic CTA button.");
     // Fallback: send dynamic interactive cta_url button
     await sendCtaUrlButton(
       to,
