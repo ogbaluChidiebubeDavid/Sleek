@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { decryptPhone } from "@/lib/crypto";
 
 const addSchema = z.object({
-  phone: z.string().min(8),
+  phone: z.string().min(8).optional(),
+  token: z.string().optional(),
   productId: z.string(),
   color: z.string(),
   size: z.string(),
@@ -11,7 +13,8 @@ const addSchema = z.object({
 });
 
 const patchSchema = z.object({
-  phone: z.string().min(8),
+  phone: z.string().min(8).optional(),
+  token: z.string().optional(),
   productId: z.string(),
   color: z.string(),
   size: z.string(),
@@ -19,7 +22,8 @@ const patchSchema = z.object({
 });
 
 const deleteSchema = z.object({
-  phone: z.string().min(8),
+  phone: z.string().min(8).optional(),
+  token: z.string().optional(),
   productId: z.string(),
   color: z.string(),
   size: z.string(),
@@ -37,8 +41,15 @@ async function ensureUser(phone: string) {
 }
 
 export async function GET(req: NextRequest) {
-  const phone = req.nextUrl.searchParams.get("phone");
-  if (!phone) return NextResponse.json({ error: "phone required" }, { status: 400 });
+  const phoneParam = req.nextUrl.searchParams.get("phone");
+  const tokenParam = req.nextUrl.searchParams.get("token");
+
+  let phone = phoneParam;
+  if (tokenParam) {
+    phone = decryptPhone(tokenParam);
+  }
+
+  if (!phone) return NextResponse.json({ error: "phone or token required" }, { status: 400 });
 
   const user = await prisma.user.findUnique({
     where: { phone },
@@ -58,7 +69,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { phone, productId, color, size, quantity = 1 } = parsed.data;
+  let { phone, token, productId, color, size, quantity = 1 } = parsed.data;
+  if (token) {
+    phone = decryptPhone(token);
+  }
+
+  if (!phone) {
+    return NextResponse.json({ error: "phone or token required" }, { status: 400 });
+  }
+
   const user = await ensureUser(phone);
   const cart = await prisma.cart.findUniqueOrThrow({ where: { userId: user.id } });
 
@@ -85,7 +104,15 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { phone, productId, color, size, quantity } = parsed.data;
+  let { phone, token, productId, color, size, quantity } = parsed.data;
+  if (token) {
+    phone = decryptPhone(token);
+  }
+
+  if (!phone) {
+    return NextResponse.json({ error: "phone or token required" }, { status: 400 });
+  }
+
   const user = await ensureUser(phone);
   const cart = await prisma.cart.findUniqueOrThrow({ where: { userId: user.id } });
 
@@ -110,7 +137,15 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { phone, productId, color, size } = parsed.data;
+  let { phone, token, productId, color, size } = parsed.data;
+  if (token) {
+    phone = decryptPhone(token);
+  }
+
+  if (!phone) {
+    return NextResponse.json({ error: "phone or token required" }, { status: 400 });
+  }
+
   const user = await ensureUser(phone);
   const cart = await prisma.cart.findUniqueOrThrow({ where: { userId: user.id } });
 

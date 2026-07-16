@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { decryptPhone } from "@/lib/crypto";
 
 const schema = z.object({
-  phone: z.string().min(8),
+  phone: z.string().min(8).optional(),
+  token: z.string().optional(),
   name: z.string().optional(),
   email: z.string().email().optional(),
 });
@@ -14,7 +16,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { phone, name, email } = parsed.data;
+  let { phone, token, name, email } = parsed.data;
+  if (token) {
+    phone = decryptPhone(token);
+  }
+
+  if (!phone) {
+    return NextResponse.json({ error: "phone or token required" }, { status: 400 });
+  }
+
   const user = await prisma.user.upsert({
     where: { phone },
     create: { phone, name, email },

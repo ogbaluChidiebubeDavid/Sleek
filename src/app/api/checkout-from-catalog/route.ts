@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { generateTrackingNumber } from "@/lib/utils";
 import { sendInteractiveButtons } from "@/lib/whatsapp";
+import { decryptPhone, encryptPhone } from "@/lib/crypto";
 
 export async function POST(req: NextRequest) {
-  const { phone, selectedItems } = await req.json();
+  let { phone, token, selectedItems } = await req.json();
+  
+  if (token) {
+    phone = decryptPhone(token);
+  }
+  
   if (!phone) {
-    return NextResponse.json({ error: "phone required" }, { status: 400 });
+    return NextResponse.json({ error: "phone or token required" }, { status: 400 });
   }
 
   const user = await prisma.user.findUnique({
@@ -70,7 +76,7 @@ export async function POST(req: NextRequest) {
   });
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const checkoutUrl = `${baseUrl}/checkout/${order.id}?phone=${encodeURIComponent(phone)}`;
+  const checkoutUrl = `${baseUrl}/checkout/${order.id}?token=${encodeURIComponent(encryptPhone(phone))}`;
 
   await sendInteractiveButtons(
     phone,

@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getDirectImageUrl } from "./utils";
+import { encryptPhone } from "./crypto";
 
 const API_BASE = "https://graph.facebook.com/v21.0";
 
@@ -196,7 +197,8 @@ export async function sendProductCarousel(
 
 export async function sendFlowLink(to: string, message: string, flowPath: string) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const link = `${baseUrl}${flowPath}?phone=${encodeURIComponent(to)}`;
+  const token = encryptPhone(to);
+  const link = `${baseUrl}${flowPath}?token=${encodeURIComponent(token)}`;
   await sendTextMessage(
     to,
     `${message}\n\nOpen catalogue: ${link}\n\n(Works inside WhatsApp browser)`

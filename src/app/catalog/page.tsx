@@ -40,7 +40,9 @@ const getColorHex = (colorName: string) => {
 
 function CatalogContent() {
   const searchParams = useSearchParams();
-  const phone = searchParams.get("phone") || "";
+  const rawPhone = searchParams.get("phone") || "";
+  const token = searchParams.get("token") || "";
+
   const [products, setProducts] = useState<Product[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [cart, setCart] = useState<
@@ -61,8 +63,9 @@ function CatalogContent() {
   }, []);
 
   useEffect(() => {
-    if (!phone) return;
-    fetch(`/api/cart?phone=${encodeURIComponent(phone)}`)
+    if (!token && !rawPhone) return;
+    const query = token ? `token=${encodeURIComponent(token)}` : `phone=${encodeURIComponent(rawPhone)}`;
+    fetch(`/api/cart?${query}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.items?.length) {
@@ -78,7 +81,7 @@ function CatalogContent() {
           );
         }
       });
-  }, [phone]);
+  }, [token, rawPhone]);
 
   // Whenever the cart loads, select all items by default if not already initialized
   useEffect(() => {
@@ -105,12 +108,12 @@ function CatalogContent() {
     };
     const itemKey = `${product.id}-${variant.color}-${variant.size}`;
 
-    if (phone) {
+    if (token || rawPhone) {
       await fetch("/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone,
+          ...(token ? { token } : { phone: rawPhone }),
           productId: product.id,
           color: variant.color,
           size: variant.size,
@@ -166,12 +169,12 @@ function CatalogContent() {
       )
     );
 
-    if (phone) {
+    if (token || rawPhone) {
       await fetch("/api/cart", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone,
+          ...(token ? { token } : { phone: rawPhone }),
           productId: product.id,
           color,
           size,
@@ -195,12 +198,12 @@ function CatalogContent() {
       return next;
     });
 
-    if (phone) {
+    if (token || rawPhone) {
       await fetch("/api/cart", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone,
+          ...(token ? { token } : { phone: rawPhone }),
           productId: product.id,
           color,
           size,
@@ -211,7 +214,7 @@ function CatalogContent() {
   };
 
   const checkout = async () => {
-    if (!phone || !cart.length) return;
+    if ((!token && !rawPhone) || !cart.length) return;
 
     const selectedItems = cart
       .filter((item) => {
@@ -229,23 +232,44 @@ function CatalogContent() {
       return;
     }
 
-    const res = await fetch("/api/checkout-from-catalog", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, selectedItems }),
-    });
-    const data = await res.json();
-    if (data.checkoutUrl) {
-      window.location.href = getWhatsAppLink("I have completed my selection");
+    try {
+      const res = await fetch("/api/checkout-from-catalog", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(token ? { token } : { phone: rawPhone }),
+          selectedItems,
+        }),
+      });
+      const data = await res.json();
+      if (data.checkoutUrl) {
+        try {
+          window.close();
+        } catch (e) {
+          console.error("Failed to close window:", e);
+        }
+        setTimeout(() => {
+          window.location.href = getWhatsAppLink();
+        }, 100);
+      } else {
+        alert(data.error || "Failed to proceed to checkout.");
+      }
+    } catch (err) {
+      console.error("Checkout failed:", err);
+      alert("Checkout failed. Please try again.");
     }
   };
 
   const signup = async () => {
-    if (!phone) return;
+    if (!token && !rawPhone) return;
     await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, name, email }),
+      body: JSON.stringify({
+        ...(token ? { token } : { phone: rawPhone }),
+        name,
+        email,
+      }),
     });
     setSignupOpen(false);
   };
@@ -428,19 +452,31 @@ function CatalogContent() {
                         size: p.sizes[0],
                       };
                       await addToCart(p, qty);
-                      const res = await fetch("/api/checkout-from-catalog", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          phone,
-                          selectedItems: [
-                            { productId: p.id, color: variant.color, size: variant.size }
-                          ]
-                        }),
-                      });
-                      const data = await res.json();
-                      if (data.checkoutUrl) {
-                        window.location.href = getWhatsAppLink("I want to checkout this item");
+                      try {
+                        const res = await fetch("/api/checkout-from-catalog", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            ...(token ? { token } : { phone: rawPhone }),
+                            selectedItems: [
+                              { productId: p.id, color: variant.color, size: variant.size }
+                            ]
+                          }),
+                        });
+                        const data = await res.json();
+                        if (data.checkoutUrl) {
+                          try {
+                            window.close();
+                          } catch (e) {}
+                          setTimeout(() => {
+                            window.location.href = getWhatsAppLink();
+                          }, 100);
+                        } else {
+                          alert(data.error || "Failed to proceed to checkout.");
+                        }
+                      } catch (err) {
+                        console.error("Checkout failed:", err);
+                        alert("Checkout failed. Please try again.");
                       }
                     }}
                     className="flex-1 rounded-xl bg-[#25D366] hover:bg-[#20ba56] py-2 text-xs font-extrabold text-gray-950 transition-all active:scale-95 shadow-md shadow-[#25D366]/10"
