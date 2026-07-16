@@ -249,7 +249,7 @@ function CatalogContent() {
           console.error("Failed to close window:", e);
         }
         setTimeout(() => {
-          window.location.href = getWhatsAppLink();
+          window.location.href = getWhatsAppLink("i want to check out");
         }, 100);
       } else {
         alert(data.error || "Failed to proceed to checkout.");
@@ -469,7 +469,7 @@ function CatalogContent() {
                             window.close();
                           } catch (e) {}
                           setTimeout(() => {
-                            window.location.href = getWhatsAppLink();
+                            window.location.href = getWhatsAppLink("i want to check out");
                           }, 100);
                         } else {
                           alert(data.error || "Failed to proceed to checkout.");

@@ -93,6 +93,19 @@ export async function handleIncomingMessage(
   const state = await getState(phone);
   const data: StateData = JSON.parse(state.data || "{}");
 
+  if (normalized === "i want to check out" || normalized.includes("i want to checkout")) {
+    await sendInteractiveButtons(
+      phone,
+      "Do you want to add more footwear or continue to checkout?",
+      [
+        { id: "view_more", title: "Add more to cart" },
+        { id: "checkout", title: "Continue checkout" },
+      ]
+    );
+    await setState(phone, "post_checkout", {});
+    return;
+  }
+
   if (
     normalized.includes("hello, i want to buy footwear") ||
     (normalized.includes("hello") &&
@@ -224,6 +237,25 @@ export async function handleIncomingMessage(
 
   if (normalized === "checkout" || normalized.includes("continue to checkout")) {
     const user = await getOrCreateUser(phone);
+
+    // Check if the user has a pending (awaiting_payment) order
+    const pendingOrder = await prisma.order.findFirst({
+      where: {
+        userId: user.id,
+        status: "awaiting_payment",
+      },
+      orderBy: { createdAt: "desc" },
+      include: { items: true },
+    });
+
+    if (pendingOrder) {
+      const total = pendingOrder.totalAmount;
+      const itemsNames = pendingOrder.items.map((i) => i.name).join(", ");
+      await sendCheckoutLink(phone, pendingOrder.id, total, itemsNames);
+      await setState(phone, "checkout", { checkoutOrderId: pendingOrder.id });
+      return;
+    }
+
     await initiateCheckout(phone, user.id);
     return;
   }

@@ -78,14 +78,5 @@ export async function POST(req: NextRequest) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const checkoutUrl = `${baseUrl}/checkout/${order.id}?token=${encodeURIComponent(encryptPhone(phone))}`;
 
-  await sendInteractiveButtons(
-    phone,
-    "Do you want to add more footwear or continue to checkout?",
-    [
-      { id: "view_more", title: "Add more to cart" },
-      { id: "checkout", title: "Continue checkout" },
-    ]
-  );
-
   return NextResponse.json({ orderId: order.id, checkoutUrl, trackingNumber: order.trackingNumber });
 }
