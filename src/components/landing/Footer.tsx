@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SleekLogo } from "@/components/brand/SleekLogo";
+import { getTelegramBotLink } from "@/lib/utils";
 
 export function Footer() {
   return (
@@ -16,6 +17,14 @@ export function Footer() {
           <Link href="/privacy" className="hover:text-sleek-600">
             Privacy Policy
           </Link>
+          <a
+            href={getTelegramBotLink()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#2AABEE]"
+          >
+            Telegram
+          </a>
         </div>
       </div>
     </footer>

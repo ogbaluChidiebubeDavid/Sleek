@@ -2,7 +2,12 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { formatCurrency, getWhatsAppLink } from "@/lib/utils";
+import {
+  formatCurrency,
+  getWhatsAppLink,
+  isTelegramWebApp,
+  closeTelegramApp,
+} from "@/lib/utils";
 import { CheckCircle, ExternalLink, MessageSquare } from "lucide-react";
 
 function SuccessContent() {
@@ -23,6 +28,8 @@ function SuccessContent() {
       .catch(console.error);
   }, [orderId]);
 
+  const inTelegram = isTelegramWebApp();
+
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center px-6 text-center">
       <CheckCircle className="h-16 w-16 text-green-400 mb-6" />
@@ -41,7 +48,7 @@ function SuccessContent() {
             </div>
             
             <p className="text-xs text-gray-500">
-              Use this tracking number in WhatsApp to query shipping progress anytime.
+              Use this tracking number {inTelegram ? "in our Telegram bot chat to track your order" : "in WhatsApp to query shipping progress anytime"}.
             </p>
 
             <p className="text-2xl font-bold font-mono text-white mt-4">
@@ -68,12 +75,22 @@ function SuccessContent() {
         <p className="text-gray-400 text-sm mb-8">Loading order transaction details...</p>
       )}
 
-      <a
-        href={getWhatsAppLink(order ? `track ${order.trackingNumber}` : "I want to track my order")}
-        className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-8 py-3.5 font-bold text-white shadow-lg hover:scale-[1.02] active:scale-[0.98] transition"
-      >
-        <MessageSquare className="h-5 w-5" /> Return to WhatsApp
-      </a>
+      {inTelegram ? (
+        <button
+          type="button"
+          onClick={closeTelegramApp}
+          className="inline-flex items-center gap-2 rounded-full bg-[#2AABEE] px-8 py-3.5 font-bold text-white shadow-lg hover:scale-[1.02] active:scale-[0.98] transition"
+        >
+          <MessageSquare className="h-5 w-5" /> Return to Telegram
+        </button>
+      ) : (
+        <a
+          href={getWhatsAppLink(order ? `track ${order.trackingNumber}` : "I want to track my order")}
+          className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-8 py-3.5 font-bold text-white shadow-lg hover:scale-[1.02] active:scale-[0.98] transition"
+        >
+          <MessageSquare className="h-5 w-5" /> Return to WhatsApp
+        </a>
+      )}
     </div>
   );
 }

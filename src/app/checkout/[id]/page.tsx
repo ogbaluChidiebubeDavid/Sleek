@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getTelegramWebApp, closeTelegramApp } from "@/lib/utils";
 import {
   Wallet,
   Key,
@@ -291,14 +291,19 @@ function CheckoutContent() {
 
       setPaymentStatus("success");
 
-      // Auto-exit webview using deep-linking back to WhatsApp chat
-      const waNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "2348146272564";
-      const deepLink = `whatsapp://send?phone=${waNumber}&text=track%20${order.trackingNumber}`;
-      
-      try {
-        window.location.href = deepLink;
-      } catch (err) {
-        console.error("Deep link redirect failed:", err);
+      // Auto-exit webview: return to the Telegram chat when running as a
+      // Telegram Mini App, otherwise deep-link back to the WhatsApp chat
+      if (getTelegramWebApp()) {
+        closeTelegramApp();
+      } else {
+        const waNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "2348146272564";
+        const deepLink = `whatsapp://send?phone=${waNumber}&text=track%20${order.trackingNumber}`;
+
+        try {
+          window.location.href = deepLink;
+        } catch (err) {
+          console.error("Deep link redirect failed:", err);
+        }
       }
 
       // Proceed to success page as a secondary backup/confirmation view

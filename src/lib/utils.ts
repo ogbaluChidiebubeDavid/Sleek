@@ -36,6 +36,36 @@ export function getWhatsAppLink(message?: string) {
   );
   return `https://wa.me/${phone.replace(/\D/g, "")}?text=${text}`;}
 
+export function getTelegramBotLink(message?: string) {
+  const username = (
+    process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "sleek_footwear_bot"
+  ).replace(/^@/, "");
+  const suffix = message ? `?text=${encodeURIComponent(message)}` : "";
+  return `https://t.me/${username}${suffix}`;
+}
+
+export function getTelegramWebApp(): any | null {
+  if (typeof window === "undefined") return null;
+  const tg = (window as any).Telegram?.WebApp;
+  return tg && tg.initData ? tg : null;
+}
+
+export function isTelegramWebApp(): boolean {
+  return getTelegramWebApp() !== null;
+}
+
+/** Closes the mini app and returns the user to their chat. */
+export function closeTelegramApp() {
+  const tg = getTelegramWebApp();
+  if (tg) {
+    try {
+      tg.close();
+    } catch (e) {
+      console.error("Failed to close Telegram WebApp:", e);
+    }
+  }
+}
+
 export function getDirectImageUrl(url: string): string {
   if (!url) return "";
   // Check if it is a Google Drive share link

@@ -3,7 +3,13 @@
 import { useEffect, useState, Suspense } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { formatCurrency, getWhatsAppLink, getDirectImageUrl } from "@/lib/utils";
+import {
+  formatCurrency,
+  getWhatsAppLink,
+  getDirectImageUrl,
+  getTelegramWebApp,
+  closeTelegramApp,
+} from "@/lib/utils";
 import { ShoppingCart, X, UserPlus, Trash2 } from "lucide-react";
 
 type Product = {
@@ -41,7 +47,8 @@ const getColorHex = (colorName: string) => {
 function CatalogContent() {
   const searchParams = useSearchParams();
   const rawPhone = searchParams.get("phone") || "";
-  const token = searchParams.get("token") || "";
+  const [token, setToken] = useState(searchParams.get("token") || "");
+  const [inTelegram, setInTelegram] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -60,6 +67,32 @@ function CatalogContent() {
     fetch("/api/products")
       .then((r) => r.json())
       .then(setProducts);
+  }, []);
+
+  // Telegram Mini App: authenticate the signed initData and obtain a
+  // session token compatible with the existing phone/token flows.
+  useEffect(() => {
+    const tg = getTelegramWebApp();
+    if (!tg) return;
+    setInTelegram(true);
+    try {
+      tg.ready();
+      tg.expand();
+    } catch (e) {
+      console.error("Telegram WebApp ready/expand failed:", e);
+    }
+    if (token) return;
+    fetch("/api/auth/telegram", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData: tg.initData }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.token) setToken(data.token);
+      })
+      .catch((e) => console.error("Telegram auth failed:", e));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -145,6 +178,21 @@ function CatalogContent() {
 
     setQuantities((q) => ({ ...q, [product.id]: 1 }));
     showToast(`Added ${qty} × ${product.name} (${variant.color}, Size ${variant.size}) to cart!`);
+  };
+
+  // After an order is created: in Telegram go straight to the checkout
+  // page; on WhatsApp return to the chat where the checkout link lives.
+  const proceedToCheckoutUrl = (checkoutUrl: string) => {
+    if (inTelegram) {
+      window.location.href = checkoutUrl;
+      return;
+    }
+    try {
+      window.close();
+    } catch (e) {}
+    setTimeout(() => {
+      window.location.href = getWhatsAppLink("i want to check out");
+    }, 100);
   };
 
   const toggleSelectItem = (key: string) => {
@@ -243,14 +291,7 @@ function CatalogContent() {
       });
       const data = await res.json();
       if (data.checkoutUrl) {
-        try {
-          window.close();
-        } catch (e) {
-          console.error("Failed to close window:", e);
-        }
-        setTimeout(() => {
-          window.location.href = getWhatsAppLink("i want to check out");
-        }, 100);
+        proceedToCheckoutUrl(data.checkoutUrl);
       } else {
         alert(data.error || "Failed to proceed to checkout.");
       }
@@ -465,12 +506,7 @@ function CatalogContent() {
                         });
                         const data = await res.json();
                         if (data.checkoutUrl) {
-                          try {
-                            window.close();
-                          } catch (e) {}
-                          setTimeout(() => {
-                            window.location.href = getWhatsAppLink("i want to check out");
-                          }, 100);
+                          proceedToCheckoutUrl(data.checkoutUrl);
                         } else {
                           alert(data.error || "Failed to proceed to checkout.");
                         }
@@ -629,12 +665,22 @@ function CatalogContent() {
         </div>
       )}
 
-      <a
-        href={getWhatsAppLink()}
-        className="fixed bottom-4 right-4 rounded-full bg-[#25D366] px-4 py-3 text-sm font-semibold shadow-lg"
-      >
-        Back to chat
-      </a>
+      {inTelegram ? (
+        <button
+          type="button"
+          onClick={closeTelegramApp}
+          className="fixed bottom-4 right-4 rounded-full bg-[#25D366] px-4 py-3 text-sm font-semibold shadow-lg"
+        >
+          Back to chat
+        </button>
+      ) : (
+        <a
+          href={getWhatsAppLink()}
+          className="fixed bottom-4 right-4 rounded-full bg-[#25D366] px-4 py-3 text-sm font-semibold shadow-lg"
+        >
+          Back to chat
+        </a>
+      )}
 
       {/* Elegant toast notification overlay */}
       {toast.show && (

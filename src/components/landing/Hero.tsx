@@ -2,11 +2,12 @@
 
 import { motion } from "framer-motion";
 import { PhoneMockup } from "./PhoneMockup";
-import { getWhatsAppLink } from "@/lib/utils";
+import { getWhatsAppLink, getTelegramBotLink } from "@/lib/utils";
 import { ShoppingBag, ShieldCheck, Truck } from "lucide-react";
 
 export function Hero() {
   const waLink = getWhatsAppLink();
+  const tgLink = getTelegramBotLink();
 
   return (
     <section className="relative min-h-[100svh] hero-geometric pt-28 pb-16 flex items-center">
@@ -75,6 +76,20 @@ export function Hero() {
                 className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-8 py-4 text-base font-bold text-gray-800 shadow-sm transition hover:bg-gray-50 hover:scale-[1.02] active:scale-[0.98]"
               >
                 Explore Catalogue
+              </a>
+
+              {/* Telegram Button */}
+              <a
+                href={tgLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2.5 rounded-xl bg-[#2AABEE] px-8 py-4 text-base font-bold text-white shadow-lg shadow-[#2AABEE]/25 transition hover:bg-[#229ED9] hover:scale-[1.02] active:scale-[0.98]"
+              >
+                {/* Telegram paper-plane icon */}
+                <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                </svg>
+                Shop on Telegram
               </a>
             </motion.div>
 
