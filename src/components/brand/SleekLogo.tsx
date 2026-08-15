@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 type SleekLogoProps = {
@@ -10,21 +11,33 @@ export function SleekLogo({ className, variant = "full" }: SleekLogoProps) {
     return (
       <span
         className={cn(
-          "inline-flex h-9 w-9 items-center justify-center bg-sleek-500 font-display text-sm font-black tracking-tighter text-white",
+          "relative inline-flex h-9 items-center overflow-hidden rounded-full bg-white px-2.5 shadow-sm",
           className
         )}
         aria-hidden
       >
-        S
+        <Image
+          src="/sleek-logo.png"
+          alt="Sleek"
+          width={875}
+          height={285}
+          className="h-5 w-auto object-contain"
+        />
       </span>
     );
   }
 
   return (
-    <span className={cn("inline-flex items-stretch overflow-hidden", className)}>
-      <span className="flex items-center bg-sleek-500 px-3 py-2 font-display text-lg font-black tracking-tight text-white sm:px-4 sm:text-xl">
-        SLEEK
-      </span>
+    <span className={cn("inline-flex items-center", className)}>
+      <Image
+        src="/sleek-logo.png"
+        alt="Sleek"
+        width={116}
+        height={38}
+        priority
+        className="h-auto w-auto"
+        style={{ width: "auto", height: 38 }}
+      />
     </span>
   );
 }

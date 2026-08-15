@@ -326,7 +326,15 @@ function CatalogContent() {
   return (
     <div className="min-h-screen bg-[#0b141a] text-white pb-24">
       <header className="sticky top-0 z-40 flex items-center justify-between border-b border-white/10 bg-[#1f2c34] px-4 py-3">
-        <h1 className="font-semibold text-[#25D366]">Sleek Catalogue</h1>
+        <Image
+          src="/sleek-logo.png"
+          alt="Sleek Catalogue"
+          width={116}
+          height={38}
+          priority
+          className="h-8 w-auto rounded-full bg-white px-2 py-0.5"
+          unoptimized
+        />
         <div className="flex gap-2">
           <button
             type="button"

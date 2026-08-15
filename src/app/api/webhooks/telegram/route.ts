@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   const msg = update?.message;
   if (msg?.chat?.id) {
     const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL || "https://sleek-wa.vercel.app";
+      process.env.NEXT_PUBLIC_APP_URL || "https://sleek-brown.vercel.app";
     const catalogUrl = `${appUrl}/catalog`;
 
     await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {

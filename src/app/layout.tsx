@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description:
     "Buy footwear with Sleek AI on WhatsApp. Pay with Opay, crypto, Flutterwave, or Paystack.",
   icons: {
-    icon: "/favicon.svg",
+    icon: "/sleek-logo.png",
   },
 };
 
