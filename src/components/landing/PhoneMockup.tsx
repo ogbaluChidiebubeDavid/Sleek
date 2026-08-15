@@ -149,7 +149,7 @@ export function PhoneMockup({ variant = "full" }: PhoneMockupProps) {
           {/* WhatsApp Header */}
           <div className="flex items-center gap-2.5 bg-[#f0f2f5] px-3.5 py-2.5 border-b border-[#e9edef]">
             <ChevronLeft className="h-5 w-5 text-[#54656f] cursor-pointer" />
-            <SleekLogo variant="mark" className="!h-9 !w-9 !rounded-full !text-sm shadow-sm" />
+            <SleekLogo variant="mark" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-900 truncate">Sleek ⚡</p>
               <p className="text-[10px] text-gray-500">online</p>
