@@ -57,7 +57,8 @@ type Order = {
   };
 };
 
-const ETH_RATE_NGN = 3500000;
+// NGN value of 1 ETH used to quote crypto prices (env-configurable).
+const ETH_RATE_NGN = Number(process.env.NEXT_PUBLIC_ETH_RATE_NGN) || 4500000;
 // Real funds by default: Base mainnet. Set NEXT_PUBLIC_RPC_URL to a
 // Sepolia RPC to go back to testnet.
 const PUBLIC_RPC = process.env.NEXT_PUBLIC_RPC_URL || "https://mainnet.base.org";

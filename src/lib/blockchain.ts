@@ -3,10 +3,16 @@ import { ethers } from "ethers";
 // Default to Base Mainnet for real funds. Set NEXT_PUBLIC_RPC_URL to a
 // Sepolia RPC to go back to testnet.
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "https://mainnet.base.org";
-const PAYMENT_ROUTER_ADDRESS = process.env.NEXT_PUBLIC_PAYMENT_ROUTER_ADDRESS || "0x9c32A15535C578c7F2B75A57CD7E44243F7BEc5e";
+const IS_TESTNET = RPC_URL.includes("sepolia");
+// The split-payment router is only deployed on Sepolia; on mainnet we
+// transfer to the vendor directly unless a mainnet router is configured.
+const PAYMENT_ROUTER_ADDRESS =
+  process.env.NEXT_PUBLIC_PAYMENT_ROUTER_ADDRESS ||
+  (IS_TESTNET ? "0x9c32A15535C578c7F2B75A57CD7E44243F7BEc5e" : "");
 
-// Simple mapping for Currency to ETH rate (1 ETH = 3,500,000 NGN or ~2,300 USD)
-const ETH_RATE_NGN = 3500000;
+// NGN value of 1 ETH used to quote crypto prices. Override with
+// NEXT_PUBLIC_ETH_RATE_NGN as the market moves.
+const ETH_RATE_NGN = Number(process.env.NEXT_PUBLIC_ETH_RATE_NGN) || 4500000;
 
 export function getProvider() {
   return new ethers.JsonRpcProvider(RPC_URL);
