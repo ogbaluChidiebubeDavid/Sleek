@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { decryptPhone } from "@/lib/crypto";
+import { createNewWallet } from "@/lib/blockchain";
 
 const schema = z.object({
   phone: z.string().min(8).optional(),
@@ -25,11 +26,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "phone or token required" }, { status: 400 });
   }
 
-  const user = await prisma.user.upsert({
+  let user = await prisma.user.upsert({
     where: { phone },
     create: { phone, name, email },
     update: { name, email },
   });
+
+  // Provision a crypto wallet at signup so the user can pay with
+  // real crypto at checkout without any extra steps.
+  if (!user.walletAddress) {
+    const wallet = createNewWallet();
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { walletAddress: wallet.address, walletPrivateKey: wallet.privateKey },
+    });
+  }
 
   const cart = await prisma.cart.findUnique({ where: { userId: user.id } });
   if (!cart) await prisma.cart.create({ data: { userId: user.id } });

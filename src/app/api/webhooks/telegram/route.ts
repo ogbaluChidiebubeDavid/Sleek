@@ -33,9 +33,14 @@ export async function POST(req: NextRequest) {
 
   const msg = update?.message;
   if (msg?.chat?.id) {
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL || "https://sleek-brown.vercel.app";
-    const catalogUrl = `${appUrl}/catalog`;
+    // Derive the URL from the request itself so the Mini App button always
+    // matches whichever domain Telegram hit the webhook on (works with
+    // custom domains without redeploying env vars).
+    const origin =
+      req.headers.get("x-forwarded-proto") && req.headers.get("x-forwarded-host")
+        ? `${req.headers.get("x-forwarded-proto")}://${req.headers.get("x-forwarded-host")}`
+        : process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
+    const catalogUrl = `${origin}/catalog`;
 
     await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: "POST",

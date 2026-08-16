@@ -5,6 +5,7 @@ import {
   verifyTelegramInitData,
   telegramUserPhone,
 } from "@/lib/telegram";
+import { createNewWallet } from "@/lib/blockchain";
 
 /**
  * Authenticates a Telegram Mini App user by validating the signed
@@ -46,11 +47,21 @@ export async function POST(req: NextRequest) {
     tgUser.username ||
     null;
 
-  const user = await prisma.user.upsert({
+  let user = await prisma.user.upsert({
     where: { phone },
     create: { phone, name },
     update: { name },
   });
+
+  // Provision a crypto wallet on first login so the user can pay with
+  // real crypto at checkout without any extra steps.
+  if (!user.walletAddress) {
+    const wallet = createNewWallet();
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { walletAddress: wallet.address, walletPrivateKey: wallet.privateKey },
+    });
+  }
 
   const cart = await prisma.cart.findUnique({ where: { userId: user.id } });
   if (!cart) await prisma.cart.create({ data: { userId: user.id } });

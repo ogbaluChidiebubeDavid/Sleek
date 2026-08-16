@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import {
@@ -62,6 +62,39 @@ function CatalogContent() {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<{ message: string; show: boolean }>({ message: "", show: false });
   const [selectedCartKeys, setSelectedCartKeys] = useState<Set<string>>(new Set());
+  const [signupError, setSignupError] = useState("");
+  const [signupSubmitting, setSignupSubmitting] = useState(false);
+
+  // Telegram Mini App auth can take a moment; every cart/checkout
+  // operation awaits this so nothing is sent without a valid token.
+  const authPromiseRef = useRef<Promise<string>>(null as any);
+  const ensureToken = (): Promise<string> => {
+    if (token) return Promise.resolve(token);
+    if (rawPhone) return Promise.resolve("");
+    if (!authPromiseRef.current) {
+      const tg = getTelegramWebApp();
+      if (!tg) return Promise.resolve("");
+      authPromiseRef.current = fetch("/api/auth/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ initData: tg.initData }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.token) {
+            setToken(data.token);
+            return data.token as string;
+          }
+          console.error("Telegram auth rejected:", data.error);
+          return "";
+        })
+        .catch((e) => {
+          console.error("Telegram auth failed:", e);
+          return "";
+        });
+    }
+    return authPromiseRef.current;
+  };
 
   useEffect(() => {
     fetch("/api/products")
@@ -81,17 +114,7 @@ function CatalogContent() {
     } catch (e) {
       console.error("Telegram WebApp ready/expand failed:", e);
     }
-    if (token) return;
-    fetch("/api/auth/telegram", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ initData: tg.initData }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.token) setToken(data.token);
-      })
-      .catch((e) => console.error("Telegram auth failed:", e));
+    if (!token) ensureToken();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -141,18 +164,24 @@ function CatalogContent() {
     };
     const itemKey = `${product.id}-${variant.color}-${variant.size}`;
 
-    if (token || rawPhone) {
-      await fetch("/api/cart", {
+    const tok = await ensureToken();
+    if (tok || rawPhone) {
+      const res = await fetch("/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...(token ? { token } : { phone: rawPhone }),
+          ...(tok ? { token: tok } : { phone: rawPhone }),
           productId: product.id,
           color: variant.color,
           size: variant.size,
           quantity: qty,
         }),
       });
+      if (!res.ok) {
+        console.error("Failed to save cart item:", await res.text());
+        showToast("Couldn't sync cart — please try again.");
+        return;
+      }
     }
 
     setCart((prev) => {
@@ -217,12 +246,13 @@ function CatalogContent() {
       )
     );
 
-    if (token || rawPhone) {
+    const tok = await ensureToken();
+    if (tok || rawPhone) {
       await fetch("/api/cart", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...(token ? { token } : { phone: rawPhone }),
+          ...(tok ? { token: tok } : { phone: rawPhone }),
           productId: product.id,
           color,
           size,
@@ -246,12 +276,13 @@ function CatalogContent() {
       return next;
     });
 
-    if (token || rawPhone) {
+    const tok = await ensureToken();
+    if (tok || rawPhone) {
       await fetch("/api/cart", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...(token ? { token } : { phone: rawPhone }),
+          ...(tok ? { token: tok } : { phone: rawPhone }),
           productId: product.id,
           color,
           size,
@@ -262,7 +293,8 @@ function CatalogContent() {
   };
 
   const checkout = async () => {
-    if ((!token && !rawPhone) || !cart.length) return;
+    const tok = await ensureToken();
+    if ((!tok && !rawPhone) || !cart.length) return;
 
     const selectedItems = cart
       .filter((item) => {
@@ -285,7 +317,7 @@ function CatalogContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...(token ? { token } : { phone: rawPhone }),
+          ...(tok ? { token: tok } : { phone: rawPhone }),
           selectedItems,
         }),
       });
@@ -302,17 +334,37 @@ function CatalogContent() {
   };
 
   const signup = async () => {
-    if (!token && !rawPhone) return;
-    await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...(token ? { token } : { phone: rawPhone }),
-        name,
-        email,
-      }),
-    });
-    setSignupOpen(false);
+    const tok = await ensureToken();
+    if (!tok && !rawPhone) return;
+    if (!name.trim()) {
+      setSignupError("Please enter your name.");
+      return;
+    }
+    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setSignupError("Please enter a valid email address.");
+      return;
+    }
+    setSignupSubmitting(true);
+    setSignupError("");
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(tok ? { token: tok } : { phone: rawPhone }),
+          name: name.trim(),
+          email: email.trim(),
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setSignupOpen(false);
+      showToast("Welcome to Sleek! Your account is ready. 🎉");
+    } catch (err) {
+      console.error("Signup failed:", err);
+      setSignupError("Signup failed — please try again.");
+    } finally {
+      setSignupSubmitting(false);
+    }
   };
 
   const cartTotal = cart.reduce((s, i) => {
@@ -338,7 +390,10 @@ function CatalogContent() {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setSignupOpen(true)}
+            onClick={() => {
+              setSignupError("");
+              setSignupOpen(true);
+            }}
             className="rounded-lg bg-white/10 p-2 hover:bg-white/20 transition-all"
             aria-label="Sign up"
           >
@@ -501,12 +556,13 @@ function CatalogContent() {
                         size: p.sizes[0],
                       };
                       await addToCart(p, qty);
+                      const tok = await ensureToken();
                       try {
                         const res = await fetch("/api/checkout-from-catalog", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
-                            ...(token ? { token } : { phone: rawPhone }),
+                            ...(tok ? { token: tok } : { phone: rawPhone }),
                             selectedItems: [
                               { productId: p.id, color: variant.color, size: variant.size }
                             ]
@@ -640,7 +696,7 @@ function CatalogContent() {
           <div className="w-full max-w-sm rounded-2xl bg-[#1f2c34] p-6">
             <h2 className="text-lg font-semibold mb-4">Join Sleek</h2>
             <p className="text-sm text-gray-400 mb-4">
-              Save your cart and get exclusive footwear promotions.
+              Create your account to save your cart, get a crypto wallet, and track orders.
             </p>
             <input
               className="mb-2 w-full rounded-lg bg-[#2a3942] px-3 py-2 text-sm"
@@ -649,18 +705,22 @@ function CatalogContent() {
               onChange={(e) => setName(e.target.value)}
             />
             <input
-              className="mb-4 w-full rounded-lg bg-[#2a3942] px-3 py-2 text-sm"
-              placeholder="Email (optional)"
+              className="mb-2 w-full rounded-lg bg-[#2a3942] px-3 py-2 text-sm"
+              placeholder="Email address"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+            {signupError && (
+              <p className="mb-2 text-xs text-red-400">{signupError}</p>
+            )}
             <button
               type="button"
               onClick={signup}
-              className="w-full rounded-xl bg-brand-500 py-3 font-semibold text-gray-950"
+              disabled={signupSubmitting}
+              className="w-full rounded-xl bg-brand-500 py-3 font-semibold text-gray-950 disabled:opacity-60"
             >
-              Sign up
+              {signupSubmitting ? "Creating account..." : "Sign up"}
             </button>
             <button
               type="button"
