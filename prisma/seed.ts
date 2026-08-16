@@ -20,7 +20,7 @@ const products = [
     description: "Everyday street sneakers with premium leather finish.",
     price: 38500,
     imageUrl:
-      "https://images.unsplash.com/photo-1606107557195-0faedce5d586?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=400&h=400&fit=crop",
     category: "sneakers",
     colors: JSON.stringify(["Navy", "Grey", "White"]),
     sizes: JSON.stringify(["39", "40", "41", "42", "43"]),
@@ -53,7 +53,7 @@ const products = [
     description: "High-top court shoes with ankle support.",
     price: 48000,
     imageUrl:
-      "https://images.unsplash.com/photo-1605348532761-676ed6b5c2a9?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1552346154-21d32810aba3?w=400&h=400&fit=crop",
     category: "sports",
     colors: JSON.stringify(["White/Red", "Black/Gold"]),
     sizes: JSON.stringify(["41", "42", "43", "44", "45"]),
@@ -64,7 +64,7 @@ const products = [
     description: "Elegant heels for formal occasions.",
     price: 35000,
     imageUrl:
-      "https://images.unsplash.com/photo-1543163521-1bf539c55dd1?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&h=400&fit=crop",
     category: "heels",
     colors: JSON.stringify(["Black", "Nude", "Burgundy"]),
     sizes: JSON.stringify(["37", "38", "39", "40", "41"]),

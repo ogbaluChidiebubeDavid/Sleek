@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
+import Image from "next/image";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { formatCurrency, getTelegramWebApp, closeTelegramApp } from "@/lib/utils";
 import {
@@ -59,6 +60,11 @@ type Order = {
 
 // NGN value of 1 ETH used to quote crypto prices (env-configurable).
 const ETH_RATE_NGN = Number(process.env.NEXT_PUBLIC_ETH_RATE_NGN) || 4500000;
+// Platform fee taken on crypto payments: 0.5% to the platform wallet,
+// the rest to the vendor. Set NEXT_PUBLIC_PLATFORM_WALLET to the
+// platform's receiving address on Base.
+const PLATFORM_FEE_BPS = 50; // basis points (50 = 0.5%)
+const PLATFORM_WALLET = process.env.NEXT_PUBLIC_PLATFORM_WALLET || "";
 // Real funds by default: Base mainnet. Set NEXT_PUBLIC_RPC_URL to a
 // Sepolia RPC to go back to testnet.
 const PUBLIC_RPC = process.env.NEXT_PUBLIC_RPC_URL || "https://mainnet.base.org";
@@ -128,20 +134,31 @@ function CheckoutContent() {
     fetch(`/api/orders/${orderId}`)
       .then((r) => r.json())
       .then((data) => {
+        // Guard against error payloads (e.g. /checkout/demo) that lack items
+        if (!data || !Array.isArray(data.items)) {
+          setOrder(null);
+          setLoading(false);
+          return;
+        }
         setOrder(data);
         if (data.user) {
-          // If the user already has a PIN password saved, they are existing
+          setShippingName(data.user.shippingName || data.user.name || "");
+          setShippingEmail(data.user.shippingEmail || data.user.email || "");
+          setShippingPhone(data.user.shippingPhone || data.user.phone || "");
+          setShippingAddress(data.user.shippingAddress || "");
+          setShippingCity(data.user.shippingCity || "");
+          setShippingCountry(data.user.shippingCountry || "Nigeria");
+
+          // Existing users go straight to the payment chooser — the PIN
+          // is only requested when they choose to pay with crypto.
           if (data.user.password) {
-            // Do not auto-unlock, wait for PIN verification
-            setIsUnlocked(false);
-          } else {
-            // New user onboarding
-            setShippingName(data.user.shippingName || data.user.name || "");
-            setShippingEmail(data.user.shippingEmail || data.user.email || "");
-            setShippingPhone(data.user.shippingPhone || data.user.phone || "");
-            setShippingAddress(data.user.shippingAddress || "");
-            setShippingCity(data.user.shippingCity || "");
-            setShippingCountry(data.user.shippingCountry || "Nigeria");
+            // Address + balance are safe to show pre-auth; the private key
+            // stays locked until the PIN is verified at crypto checkout.
+            if (data.user.walletAddress) {
+              setWalletAddress(data.user.walletAddress);
+              checkBalance(data.user.walletAddress);
+            }
+            setStep("payment");
           }
         }
         setLoading(false);
@@ -216,19 +233,11 @@ function CheckoutContent() {
 
     if (pinInput === order.user.password) {
       setIsUnlocked(true);
-      setShippingName(order.user.shippingName || order.user.name || "");
-      setShippingEmail(order.user.shippingEmail || order.user.email || "");
-      setShippingPhone(order.user.shippingPhone || order.user.phone || "");
-      setShippingAddress(order.user.shippingAddress || "");
-      setShippingCity(order.user.shippingCity || "");
-      setShippingCountry(order.user.shippingCountry || "Nigeria");
-
       if (order.user.walletAddress && order.user.walletPrivateKey) {
         setWalletAddress(order.user.walletAddress);
         setPrivateKey(order.user.walletPrivateKey);
         checkBalance(order.user.walletAddress);
       }
-      setStep("payment");
     } else {
       setPinError("Invalid Password PIN. Please try again.");
     }
@@ -336,10 +345,19 @@ function CheckoutContent() {
   const executePayment = async () => {
     if (!order) return;
 
-    const vendorAddress = order.items[0]?.product?.vendor?.walletAddress;
-    if (!vendorAddress) {
-      alert("Vendor wallet address not found. Contact support.");
-      return;
+    // Group the order into per-recipient payouts: every vendor gets the
+    // (fee-free) value of their own items; items without a vendor are
+    // platform-sold and go to the platform wallet.
+    const payouts = new Map<string, number>();
+    for (const item of order.items) {
+      const vendorAddress = item.product?.vendor?.walletAddress;
+      const recipient =
+        vendorAddress || (PLATFORM_WALLET ? PLATFORM_WALLET : null);
+      if (!recipient) {
+        alert("Vendor wallet address not found. Contact support.");
+        return;
+      }
+      payouts.set(recipient, (payouts.get(recipient) || 0) + item.price * item.quantity);
     }
 
     const priceInEth = (order.totalAmount / ETH_RATE_NGN).toFixed(6);
@@ -357,18 +375,54 @@ function CheckoutContent() {
       const userWallet = new ethers.Wallet(privateKey, provider);
 
       setPaymentStatus("broadcasting");
+      const totalWei = ethers.parseEther(priceInEth);
+
+      // 0.5% platform fee is deducted from vendor-owned amounts only.
+      const feeWeiOf = (wei: bigint, isPlatform: boolean) =>
+        !isPlatform && PLATFORM_WALLET && wei > BigInt(10000)
+          ? (wei * BigInt(PLATFORM_FEE_BPS)) / BigInt(10000)
+          : BigInt(0);
+
       let tx;
       if (CONTRACT_ADDRESS) {
+        // Split-payment router handles the fee split on-chain.
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, userWallet);
-        tx = await contract.pay(vendorAddress, orderId, {
-          value: ethers.parseEther(priceInEth),
+        tx = await contract.pay(payouts.keys().next().value, orderId, {
+          value: totalWei,
         });
       } else {
-        // No router deployed on this network — pay the vendor directly.
-        tx = await userWallet.sendTransaction({
-          to: vendorAddress,
-          value: ethers.parseEther(priceInEth),
-        });
+        // No router on this network — pay every recipient directly:
+        // each vendor their share minus the 0.5% fee, the platform its
+        // own sales plus the collected fees.
+        let lastTx;
+        let distributed = BigInt(0);
+        for (const [recipient, ngnAmount] of payouts) {
+          if (!ethers.isAddress(recipient)) {
+            throw new Error(`Invalid recipient address: ${recipient}`);
+          }
+          const grossWei = ethers.parseEther(
+            (ngnAmount / ETH_RATE_NGN).toFixed(6)
+          );
+          const netWei = grossWei - feeWeiOf(grossWei, recipient === PLATFORM_WALLET);
+          if (netWei <= BigInt(0)) continue;
+          const vendorTx = await userWallet.sendTransaction({
+            to: recipient,
+            value: netWei,
+          });
+          await vendorTx.wait();
+          distributed += netWei;
+          lastTx = vendorTx;
+        }
+        // Anything lost to wei-level rounding goes to the platform.
+        const dust = totalWei - distributed;
+        if (dust > BigInt(10000) && PLATFORM_WALLET && ethers.isAddress(PLATFORM_WALLET)) {
+          const dustTx = await userWallet.sendTransaction({
+            to: PLATFORM_WALLET,
+            value: dust,
+          });
+          await dustTx.wait();
+        }
+        tx = lastTx!;
       }
 
       setPaymentStatus("confirming");
@@ -461,8 +515,13 @@ function CheckoutContent() {
       <div>
         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-[#00c980] to-[#059669] bg-clip-text text-transparent">
-              Sleek Checkout ⚡
+            <h1 className="flex items-center gap-2 text-xl font-bold">
+              <span className="inline-flex h-8 items-center overflow-hidden rounded-full bg-white px-2">
+                <Image src="/sleek-logo.png" alt="Sleek" width={875} height={285} className="h-4.5 w-auto object-contain" />
+              </span>
+              <span className="bg-gradient-to-r from-[#00c980] to-[#059669] bg-clip-text text-transparent">
+                Checkout
+              </span>
             </h1>
             <p className="text-xs text-gray-500 font-mono mt-0.5">
               Ref: {order.trackingNumber}
@@ -499,51 +558,17 @@ function CheckoutContent() {
                 <p className="text-xs text-gray-400 font-mono">{priceInEth} ETH</p>
               </div>
             </li>
+            {method === "crypto" && PLATFORM_WALLET && (
+              <li className="flex justify-between text-[11px] text-gray-500">
+                <span>Includes 0.5% platform fee</span>
+                <span>{formatCurrency(order.totalAmount * 0.005)}</span>
+              </li>
+            )}
           </ul>
         </div>
 
-        {/* STEP 1: PASSWORD PIN UNLOCK (Existing User) */}
-        {!isNewUser && !isUnlocked && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-              <Lock className="h-4 w-4 text-[#00c980]" /> Transaction Authorization PIN
-            </h3>
-            <p className="text-xs text-gray-400">
-              Please enter your Password PIN to unlock your secure EVM wallet and verify this transaction.
-            </p>
-
-            <div>
-              <label className="block text-xs text-gray-400 mb-1.5 font-medium">Password PIN</label>
-              <div className="relative">
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter your PIN password"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3 pl-10 text-sm focus:border-[#00c980] outline-none transition text-white"
-                />
-                <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-gray-500" />
-              </div>
-            </div>
-
-            {pinError && (
-              <p className="text-xs text-red-400 font-medium flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" /> {pinError}
-              </p>
-            )}
-
-            <button
-              type="button"
-              onClick={handleUnlock}
-              className="w-full mt-2 rounded-xl bg-[#00c980] py-3.5 font-bold text-white text-sm hover:bg-[#059669] transition shadow-lg shadow-[#00c980]/20 active:scale-[0.98]"
-            >
-              Verify PIN & Unlock Wallet
-            </button>
-          </div>
-        )}
-
-        {/* STEP 1: SIGNUP & ONBOARDING (New User) */}
+        {/* STEP 1: SIGNUP & ONBOARDING (New User) — existing users skip
+            straight to the payment chooser below. */}
         {isNewUser && step === "shipping" && (
           <form onSubmit={handleShippingSubmit} className="space-y-4">
             <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
@@ -663,7 +688,7 @@ function CheckoutContent() {
         )}
 
         {/* STEP 2: WALLET CREATION & ON-CHAIN PAYMENT */}
-        {step === "payment" && (isNewUser || isUnlocked) && (
+        {step === "payment" && (
           <div className="space-y-6">
             {/* PAYMENT METHOD CHOOSER */}
             <div className="space-y-3">
@@ -756,7 +781,46 @@ function CheckoutContent() {
               </div>
             )}
 
-            {method === "crypto" && (
+            {/* Crypto requires the wallet PIN to authorize the on-chain
+                transaction — other payment methods don't. */}
+            {method === "crypto" && !isNewUser && !isUnlocked && (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-4">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-[#00c980]" /> Authorize Crypto Payment
+                </h3>
+                <p className="text-xs text-gray-400">
+                  Enter your password PIN to unlock your wallet and confirm this transaction.
+                </p>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1.5 font-medium">Password PIN</label>
+                  <div className="relative">
+                    <input
+                      type="password"
+                      required
+                      placeholder="Enter your PIN password"
+                      value={pinInput}
+                      onChange={(e) => setPinInput(e.target.value)}
+                      className="w-full rounded-xl bg-white/[0.03] border border-white/10 px-4 py-3 pl-10 text-sm focus:border-[#00c980] outline-none transition text-white"
+                    />
+                    <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-gray-500" />
+                  </div>
+                </div>
+                {pinError && (
+                  <p className="text-xs text-red-400 font-medium flex items-center gap-1">
+                    <AlertTriangle className="h-3.5 w-3.5" /> {pinError}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleUnlock}
+                  className="w-full mt-2 rounded-xl bg-[#00c980] py-3.5 font-bold text-white text-sm hover:bg-[#059669] transition shadow-lg shadow-[#00c980]/20 active:scale-[0.98]"
+                >
+                  Verify PIN & Unlock Wallet
+                </button>
+              </div>
+            )}
+
+            {method === "crypto" && (isNewUser || isUnlocked) && (
             <>
             {/* BALANCE GUARDRAIL - INSUFFICIENT FUNDS PANEL */}
             {isInsufficientFunds ? (
@@ -964,7 +1028,7 @@ function CheckoutContent() {
                 <div className="rounded-xl border border-white/5 bg-white/[0.01] p-4 text-xs text-gray-400 space-y-2">
                   <h4 className="font-semibold text-gray-300">How to pay:</h4>
                   <p>
-                    Your wallet balance is fully funded. Click the button below to authorize the routing contract to deduct 0.01% platform fee and send 99.99% to the vendor wallet on-chain.
+                    Your wallet balance is fully funded. Click the button below to authorize the routing contract to deduct the 0.5% platform fee and send the remaining 99.5% to the vendor(s) on-chain.
                   </p>
                 </div>
 
@@ -1055,7 +1119,7 @@ function CheckoutContent() {
           <Lock className="h-3 w-3" /> Secure End-to-End Encryption
         </p>
         <p className="mt-1">
-          Sleek split payment router • Platform fee: 0.01% • Settlement: 99.99% vendor.
+          Sleek split payment router • Platform fee: 0.5% • Settlement: 99.5% vendor(s).
         </p>
       </div>
     </div>

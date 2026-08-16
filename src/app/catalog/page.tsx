@@ -10,7 +10,7 @@ import {
   getTelegramWebApp,
   closeTelegramApp,
 } from "@/lib/utils";
-import { ShoppingCart, X, UserPlus, Trash2 } from "lucide-react";
+import { ShoppingCart, X, UserPlus, Trash2, User } from "lucide-react";
 
 type Product = {
   id: string;
@@ -21,6 +21,15 @@ type Product = {
   colors: string[];
   sizes: string[];
   starRating?: number;
+};
+
+// Swaps a failed product image (dead link, hotlink block) for a local
+// placeholder so the card keeps rendering.
+const onImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+  const img = e.currentTarget;
+  if (img.src.endsWith("/product-placeholder.svg")) return;
+  img.onerror = null;
+  img.src = "/product-placeholder.svg";
 };
 
 const getColorHex = (colorName: string) => {
@@ -121,24 +130,52 @@ function CatalogContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Restore the cart from a local backup so closing the webview doesn't
+  // wipe it; the server cart (loaded below) is merged on top.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("sleek_cart_backup");
+      if (raw) {
+        const backup = JSON.parse(raw);
+        if (Array.isArray(backup) && backup.length) setCart(backup);
+      }
+    } catch (e) {
+      console.error("Cart backup restore failed:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("sleek_cart_backup", JSON.stringify(cart));
+    } catch (e) {
+      /* storage full/blocked — cart still lives on the server */
+    }
+  }, [cart]);
+
   useEffect(() => {
     if (!token && !rawPhone) return;
     const query = token ? `token=${encodeURIComponent(token)}` : `phone=${encodeURIComponent(rawPhone)}`;
     fetch(`/api/cart?${query}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.items?.length) {
-          setCart(
-            data.items.map(
-              (i: { product: Product; color: string; size: string; quantity: number }) => ({
-                product: i.product,
-                color: i.color,
-                size: i.size,
-                quantity: i.quantity,
-              })
-            )
-          );
-        }
+        if (!data.items?.length) return;
+        const serverItems = data.items.map(
+          (i: { product: Product; color: string; size: string; quantity: number }) => ({
+            product: i.product,
+            color: i.color,
+            size: i.size,
+            quantity: i.quantity,
+          })
+        );
+        setCart((prev) => {
+          const byKey = new Map(prev.map((i) => [`${i.product.id}-${i.color}-${i.size}`, i]));
+          for (const item of serverItems) {
+            const key = `${item.product.id}-${item.color}-${item.size}`;
+            const existing = byKey.get(key);
+            byKey.set(key, existing && existing.quantity >= item.quantity ? existing : item);
+          }
+          return [...byKey.values()];
+        });
       });
   }, [token, rawPhone]);
 
@@ -215,6 +252,11 @@ function CatalogContent() {
   // After an order is created: in Telegram go straight to the checkout
   // page; on WhatsApp return to the chat where the checkout link lives.
   const proceedToCheckoutUrl = (checkoutUrl: string) => {
+    // Checked-out items are removed server-side; drop the local backup so
+    // they don't reappear (unselected items are re-merged from the server).
+    try {
+      localStorage.removeItem("sleek_cart_backup");
+    } catch (e) {}
     if (inTelegram) {
       window.location.href = checkoutUrl;
       return;
@@ -420,10 +462,22 @@ function CatalogContent() {
               setSignupError("");
               setSignupOpen(true);
             }}
-            className="rounded-lg bg-white/10 p-2 hover:bg-white/20 transition-all"
-            aria-label="Sign up"
+            className={`relative rounded-lg p-2 transition-all ${
+              accountReady
+                ? "bg-[#25D366]/20 hover:bg-[#25D366]/30"
+                : "bg-white/10 hover:bg-white/20"
+            }`}
+            aria-label={accountReady ? "Account" : "Sign up"}
+            title={accountReady ? "You're signed in" : "Sign up"}
           >
-            <UserPlus className="h-5 w-5" />
+            {accountReady ? (
+              <User className="h-5 w-5 text-[#25D366]" />
+            ) : (
+              <UserPlus className="h-5 w-5" />
+            )}
+            {accountReady && (
+              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#25D366]" />
+            )}
           </button>
           <button
             type="button"
@@ -460,7 +514,7 @@ function CatalogContent() {
               className="rounded-2xl border border-white/5 bg-[#1f2c34]/80 backdrop-blur-sm overflow-hidden flex flex-col justify-between shadow-lg"
             >
               <div className="relative h-40 bg-[#141d26]">
-                <Image src={getDirectImageUrl(p.imageUrl)} alt={p.name} fill className="object-cover transition-transform duration-300 hover:scale-105" unoptimized />
+                <Image src={getDirectImageUrl(p.imageUrl)} alt={p.name} fill className="object-cover transition-transform duration-300 hover:scale-105" unoptimized onError={onImgError} />
                 
                 {/* Brand Badge */}
                 <span className="absolute left-2 top-2 rounded bg-[#0b141a]/85 border border-[#25D366]/30 px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider text-[#25D366]">
@@ -652,6 +706,7 @@ function CatalogContent() {
                             fill
                             className="object-cover"
                             unoptimized
+                            onError={onImgError}
                           />
                         </div>
 
