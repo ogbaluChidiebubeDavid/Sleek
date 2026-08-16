@@ -75,6 +75,10 @@ function CatalogContent() {
   const [signupSubmitting, setSignupSubmitting] = useState(false);
   const [password, setPassword] = useState("");
   const [accountReady, setAccountReady] = useState(false);
+  const [confirmCheckout, setConfirmCheckout] = useState(false);
+  const [pendingCheckout, setPendingCheckout] = useState<
+    { productId: string; color: string; size: string }[]
+  >([]);
 
   // Telegram Mini App auth can take a moment; every cart/checkout
   // operation awaits this so nothing is sent without a valid token.
@@ -144,7 +148,14 @@ function CatalogContent() {
     }
   }, []);
 
+  const backupSkippedFirstWrite = useRef(false);
   useEffect(() => {
+    // Never overwrite the backup with the initial empty cart before the
+    // restore effect above has had a chance to run.
+    if (!backupSkippedFirstWrite.current) {
+      backupSkippedFirstWrite.current = true;
+      return;
+    }
     try {
       localStorage.setItem("sleek_cart_backup", JSON.stringify(cart));
     } catch (e) {
@@ -353,21 +364,33 @@ function CatalogContent() {
     if ((!tok && !rawPhone) || !cart.length) return;
     if (!requireAccount()) return;
 
-    const selectedItems = cart
-      .filter((item) => {
-        const key = `${item.product.id}-${item.color}-${item.size}`;
-        return selectedCartKeys.has(key);
-      })
-      .map((item) => ({
-        productId: item.product.id,
-        color: item.color,
-        size: item.size,
-      }));
+    const selectedLines = cart.filter((item) => {
+      const key = `${item.product.id}-${item.color}-${item.size}`;
+      return selectedCartKeys.has(key);
+    });
 
-    if (selectedItems.length === 0) {
+    if (selectedLines.length === 0) {
       alert("Please select at least one item to checkout.");
       return;
     }
+
+    // Last-chance reminder before the order is created: the user can
+    // still add forgotten items, or continue into the checkout window
+    // (where selection can still be changed before paying).
+    setPendingCheckout(
+      selectedLines.map((item) => ({
+        productId: item.product.id,
+        color: item.color,
+        size: item.size,
+      }))
+    );
+    setConfirmCheckout(true);
+  };
+
+  const confirmAndCheckout = async () => {
+    setConfirmCheckout(false);
+    const tok = await ensureToken();
+    if (!pendingCheckout.length) return;
 
     try {
       const res = await fetch("/api/checkout-from-catalog", {
@@ -375,7 +398,7 @@ function CatalogContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...(tok ? { token: tok } : { phone: rawPhone }),
-          selectedItems,
+          selectedItems: pendingCheckout,
         }),
       });
       const data = await res.json();
@@ -817,6 +840,50 @@ function CatalogContent() {
               className="mt-2 w-full text-sm text-gray-400"
             >
               Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirmCheckout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-[#1f2c34] p-6 text-center">
+            <h2 className="text-lg font-semibold mb-2">Almost there! 🛒</h2>
+            <p className="text-sm text-gray-300 mb-1">
+              You&apos;re checking out{" "}
+              <span className="font-semibold text-white">
+                {pendingCheckout.length} item{pendingCheckout.length > 1 ? "s" : ""}
+              </span>{" "}
+              for{" "}
+              <span className="font-bold text-[#25D366]">{formatCurrency(cartTotal)}</span>.
+            </p>
+            <p className="text-xs text-gray-500 mb-5">
+              Forgot to add something? You can add more items now — and you can still
+              adjust your selection on the checkout page before paying.
+            </p>
+            <button
+              type="button"
+              onClick={confirmAndCheckout}
+              className="w-full rounded-xl bg-[#25D366] py-3.5 font-extrabold text-gray-950 transition active:scale-[0.98]"
+            >
+              Continue to Checkout
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmCheckout(false);
+                setCartOpen(false);
+              }}
+              className="mt-2 w-full rounded-xl bg-white/10 hover:bg-white/20 py-3 text-sm font-semibold transition"
+            >
+              + Add More Items
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmCheckout(false)}
+              className="mt-2 w-full text-sm text-gray-400"
+            >
+              Not now
             </button>
           </div>
         </div>

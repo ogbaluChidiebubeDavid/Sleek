@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import Image from "next/image";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { formatCurrency, getTelegramWebApp, closeTelegramApp } from "@/lib/utils";
@@ -19,10 +19,12 @@ import {
   Phone,
   CreditCard,
   Star,
+  ArrowLeft,
 } from "lucide-react";
 import { ethers } from "ethers";
 
 type OrderItem = {
+  id: string;
   name: string;
   color: string;
   size: string;
@@ -129,6 +131,11 @@ function CheckoutContent() {
   const [inTelegram, setInTelegram] = useState(false);
   const [altPaying, setAltPaying] = useState(false);
 
+  // Checkout-window selection: items the user chose to pay for now.
+  const [keepIds, setKeepIds] = useState<Set<string>>(new Set());
+  const [itemsUpdating, setItemsUpdating] = useState(false);
+  const keepIdsInit = useRef(false);
+
   useEffect(() => {
     setInTelegram(!!getTelegramWebApp());
     fetch(`/api/orders/${orderId}`)
@@ -141,6 +148,10 @@ function CheckoutContent() {
           return;
         }
         setOrder(data);
+        if (!keepIdsInit.current && Array.isArray(data.items)) {
+          keepIdsInit.current = true;
+          setKeepIds(new Set(data.items.map((i: any) => i.id)));
+        }
         if (data.user) {
           setShippingName(data.user.shippingName || data.user.name || "");
           setShippingEmail(data.user.shippingEmail || data.user.email || "");
@@ -277,6 +288,69 @@ function CheckoutContent() {
       });
     } catch (err) {
       console.error("Saving shipping details failed:", err);
+    }
+  };
+
+  // Change which items this order includes while inside the checkout
+  // window; deselected items go back to the cart server-side.
+  const updateOrderItems = async (next: Set<string>) => {
+    if (!order || itemsUpdating) return;
+    if (next.size === 0) {
+      alert("Keep at least one item — use the back button to return everything to your cart.");
+      return;
+    }
+    const prev = keepIds;
+    setKeepIds(next);
+    setItemsUpdating(true);
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(tokenParam ? { token: tokenParam } : { phone }),
+          keepItemIds: [...next],
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.order) throw new Error(data.error || "Failed to update items");
+      setOrder(data.order);
+      setKeepIds(new Set(data.order.items.map((i: any) => i.id)));
+    } catch (err: any) {
+      console.error("Item selection update failed:", err);
+      setKeepIds(prev);
+      alert(err.message || "Could not update your selection.");
+    } finally {
+      setItemsUpdating(false);
+    }
+  };
+
+  // Back out of checkout: every item returns to the cart and the order
+  // is deleted, so the user can add what they forgot.
+  const abandonCheckout = async () => {
+    if (!order || itemsUpdating) return;
+    if (!confirm("Return all items to your cart and go back to the catalogue?")) return;
+    setItemsUpdating(true);
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(tokenParam ? { token: tokenParam } : { phone }),
+          abandon: true,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to return items");
+      try {
+        localStorage.removeItem("sleek_cart_backup");
+      } catch (e) {}
+      const backUrl = tokenParam
+        ? `/catalog?token=${encodeURIComponent(tokenParam)}`
+        : `/catalog${phone ? `?phone=${encodeURIComponent(phone)}` : ""}`;
+      window.location.href = backUrl;
+    } catch (err) {
+      console.error("Abandon checkout failed:", err);
+      alert("Could not go back — please try again.");
+      setItemsUpdating(false);
     }
   };
 
@@ -514,18 +588,29 @@ function CheckoutContent() {
       {/* Header */}
       <div>
         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
-          <div>
-            <h1 className="flex items-center gap-2 text-xl font-bold">
-              <span className="inline-flex h-8 items-center overflow-hidden rounded-full bg-white px-2">
-                <Image src="/sleek-logo.png" alt="Sleek" width={875} height={285} className="h-4.5 w-auto object-contain" />
-              </span>
-              <span className="bg-gradient-to-r from-[#00c980] to-[#059669] bg-clip-text text-transparent">
-                Checkout
-              </span>
-            </h1>
-            <p className="text-xs text-gray-500 font-mono mt-0.5">
-              Ref: {order.trackingNumber}
-            </p>
+          <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={abandonCheckout}
+              disabled={itemsUpdating}
+              aria-label="Back to catalogue"
+              className="mt-1 rounded-full border border-white/10 bg-white/[0.03] p-2 text-gray-300 hover:bg-white/10 transition disabled:opacity-50"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div>
+              <h1 className="flex items-center gap-2 text-xl font-bold">
+                <span className="inline-flex h-8 items-center overflow-hidden rounded-full bg-white px-2">
+                  <Image src="/sleek-logo.png" alt="Sleek" width={875} height={285} className="h-4.5 w-auto object-contain" />
+                </span>
+                <span className="bg-gradient-to-r from-[#00c980] to-[#059669] bg-clip-text text-transparent">
+                  Checkout
+                </span>
+              </h1>
+              <p className="text-xs text-gray-500 font-mono mt-0.5">
+                Ref: {order.trackingNumber}
+              </p>
+            </div>
           </div>
           <span className="rounded-full bg-[#00c980]/10 px-3 py-1 text-xs text-[#00c980] font-medium border border-[#00c980]/20">
             {IS_TESTNET ? "Base Sepolia" : "Base Mainnet"}
@@ -535,16 +620,31 @@ function CheckoutContent() {
         {/* Footwear Order Summary */}
         <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 mb-6 backdrop-blur-md">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-            Your Order
+            Your Order {itemsUpdating && <span className="text-[#00c980] normal-case">• updating…</span>}
           </h2>
           <ul className="space-y-3">
             {order.items.map((item, i) => (
               <li key={i} className="flex justify-between text-sm">
-                <div>
-                  <p className="font-medium text-white">{item.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {item.color} • Size {item.size} • Qty {item.quantity}
-                  </p>
+                <div className="flex items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    checked={keepIds.has(item.id)}
+                    onChange={() => {
+                      const next = new Set(keepIds);
+                      if (next.has(item.id)) next.delete(item.id);
+                      else next.add(item.id);
+                      updateOrderItems(next);
+                    }}
+                    disabled={itemsUpdating}
+                    className="mt-1 h-4 w-4 rounded border-white/10 bg-white/5 accent-[#00c980] shrink-0"
+                    aria-label={`Include ${item.name} in this order`}
+                  />
+                  <div>
+                    <p className="font-medium text-white">{item.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {item.color} • Size {item.size} • Qty {item.quantity}
+                    </p>
+                  </div>
                 </div>
                 <span className="font-medium text-gray-300">
                   {formatCurrency(item.price * item.quantity)}
@@ -565,6 +665,10 @@ function CheckoutContent() {
               </li>
             )}
           </ul>
+          <p className="mt-3 text-[11px] text-gray-500 leading-relaxed">
+            Untick any item to move it back to your cart — the total updates instantly.
+            Need to add more? Use the back arrow to return everything and keep shopping.
+          </p>
         </div>
 
         {/* STEP 1: SIGNUP & ONBOARDING (New User) — existing users skip
