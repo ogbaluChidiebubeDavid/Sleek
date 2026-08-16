@@ -16,6 +16,8 @@ import {
   Loader2,
   Lock,
   Phone,
+  CreditCard,
+  Star,
 } from "lucide-react";
 import { ethers } from "ethers";
 
@@ -56,11 +58,20 @@ type Order = {
 };
 
 const ETH_RATE_NGN = 3500000;
-const CONTRACT_ADDRESS = "0x9c32A15535C578c7F2B75A57CD7E44243F7BEc5e";
+// Real funds by default: Base mainnet. Set NEXT_PUBLIC_RPC_URL to a
+// Sepolia RPC to go back to testnet.
+const PUBLIC_RPC = process.env.NEXT_PUBLIC_RPC_URL || "https://mainnet.base.org";
+const IS_TESTNET = PUBLIC_RPC.includes("sepolia");
+const BASESCAN = `${IS_TESTNET ? "sepolia." : ""}basescan.org`;
+// The split-payment router is only deployed on Sepolia. On mainnet we
+// pay the vendor directly unless NEXT_PUBLIC_PAYMENT_ROUTER_ADDRESS
+// points at a mainnet deployment.
+const CONTRACT_ADDRESS =
+  process.env.NEXT_PUBLIC_PAYMENT_ROUTER_ADDRESS ||
+  (IS_TESTNET ? "0x9c32A15535C578c7F2B75A57CD7E44243F7BEc5e" : "");
 const CONTRACT_ABI = [
   "function pay(address payable vendor, string calldata orderId) external payable",
 ];
-const PUBLIC_RPC = "https://sepolia.base.org";
 
 function CheckoutContent() {
   const params = useParams();
@@ -68,6 +79,7 @@ function CheckoutContent() {
   const router = useRouter();
   const orderId = params.id as string;
   const phone = searchParams.get("phone") || "";
+  const tokenParam = searchParams.get("token") || "";
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,7 +117,13 @@ function CheckoutContent() {
   // Step state: 'shipping' or 'payment'
   const [step, setStep] = useState<"shipping" | "payment">("shipping");
 
+  // Payment method chooser
+  const [method, setMethod] = useState<"crypto" | "paystack" | "stars">("crypto");
+  const [inTelegram, setInTelegram] = useState(false);
+  const [altPaying, setAltPaying] = useState(false);
+
   useEffect(() => {
+    setInTelegram(!!getTelegramWebApp());
     fetch(`/api/orders/${orderId}`)
       .then((r) => r.json())
       .then((data) => {
@@ -221,10 +239,96 @@ function CheckoutContent() {
       alert("Please fill all onboarding and shipping details.");
       return;
     }
-    // Generate new Base Sepolia wallet for new user onboarding
+    // Generate a fresh wallet for new user onboarding
     const newWallet = generateWallet();
     if (newWallet) {
       setStep("payment");
+    }
+  };
+
+  // Persist shipping details before redirecting to an external/alternative
+  // payment method (Paystack, Telegram Stars) — those paths don't pass
+  // through crypto-complete where shipping is normally saved.
+  const saveShipping = async () => {
+    try {
+      await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(tokenParam ? { token: tokenParam } : { phone }),
+          shippingName,
+          shippingEmail,
+          shippingPhone,
+          shippingAddress,
+          shippingCity,
+          shippingCountry,
+          password: password || undefined,
+        }),
+      });
+    } catch (err) {
+      console.error("Saving shipping details failed:", err);
+    }
+  };
+
+  const payWithPaystack = async () => {
+    if (!order) return;
+    setAltPaying(true);
+    await saveShipping();
+    try {
+      const res = await fetch("/api/payments/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          provider: "paystack",
+          email: shippingEmail || order.user.email || "",
+        }),
+      });
+      const data = await res.json();
+      if (data.authorizationUrl) {
+        window.location.href = data.authorizationUrl;
+        return; // page navigates away
+      }
+      alert(
+        data.error ||
+          "Could not start Paystack checkout. Check that PAYSTACK_SECRET_KEY is configured."
+      );
+    } catch (err) {
+      console.error("Paystack init failed:", err);
+      alert("Paystack checkout failed. Please try again.");
+    }
+    setAltPaying(false);
+  };
+
+  const payWithTelegramStars = async () => {
+    const tg = getTelegramWebApp();
+    if (!tg || !order) return;
+    setAltPaying(true);
+    await saveShipping();
+    try {
+      const res = await fetch("/api/payments/telegram-stars", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json();
+      if (!data.invoiceLink) {
+        alert(data.error || "Could not create Telegram invoice.");
+        setAltPaying(false);
+        return;
+      }
+      tg.openInvoice(data.invoiceLink, (status: string) => {
+        if (status === "paid") {
+          router.push(`/checkout/success?orderId=${orderId}`);
+        } else {
+          if (status === "failed") alert("Payment failed. Please try again.");
+          setAltPaying(false);
+        }
+      });
+    } catch (err) {
+      console.error("Telegram Stars init failed:", err);
+      alert("Telegram payment failed. Please try again.");
+      setAltPaying(false);
     }
   };
 
@@ -250,12 +354,21 @@ function CheckoutContent() {
     try {
       const provider = new ethers.JsonRpcProvider(PUBLIC_RPC);
       const userWallet = new ethers.Wallet(privateKey, provider);
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, userWallet);
 
       setPaymentStatus("broadcasting");
-      const tx = await contract.pay(vendorAddress, orderId, {
-        value: ethers.parseEther(priceInEth),
-      });
+      let tx;
+      if (CONTRACT_ADDRESS) {
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, userWallet);
+        tx = await contract.pay(vendorAddress, orderId, {
+          value: ethers.parseEther(priceInEth),
+        });
+      } else {
+        // No router deployed on this network — pay the vendor directly.
+        tx = await userWallet.sendTransaction({
+          to: vendorAddress,
+          value: ethers.parseEther(priceInEth),
+        });
+      }
 
       setPaymentStatus("confirming");
       setTxHash(tx.hash);
@@ -355,7 +468,7 @@ function CheckoutContent() {
             </p>
           </div>
           <span className="rounded-full bg-[#00c980]/10 px-3 py-1 text-xs text-[#00c980] font-medium border border-[#00c980]/20">
-            Base Sepolia
+            {IS_TESTNET ? "Base Sepolia" : "Base Mainnet"}
           </span>
         </div>
 
@@ -551,6 +664,99 @@ function CheckoutContent() {
         {/* STEP 2: WALLET CREATION & ON-CHAIN PAYMENT */}
         {step === "payment" && (isNewUser || isUnlocked) && (
           <div className="space-y-6">
+            {/* PAYMENT METHOD CHOOSER */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+                Choose how to pay
+              </h3>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={() => setMethod("crypto")}
+                  className={`rounded-xl border p-3.5 text-left transition ${
+                    method === "crypto"
+                      ? "border-[#00c980] bg-[#00c980]/10"
+                      : "border-white/10 bg-white/[0.02] hover:border-white/25"
+                  }`}
+                >
+                  <Wallet className="h-5 w-5 mb-1.5 text-[#00c980]" />
+                  <p className="text-xs font-bold text-white">Crypto Wallet</p>
+                  <p className="text-[10px] text-gray-400">ETH on Base</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMethod("paystack")}
+                  className={`rounded-xl border p-3.5 text-left transition ${
+                    method === "paystack"
+                      ? "border-[#00c980] bg-[#00c980]/10"
+                      : "border-white/10 bg-white/[0.02] hover:border-white/25"
+                  }`}
+                >
+                  <CreditCard className="h-5 w-5 mb-1.5 text-[#0ba4db]" />
+                  <p className="text-xs font-bold text-white">Paystack</p>
+                  <p className="text-[10px] text-gray-400">Card • Transfer • USSD</p>
+                </button>
+                {inTelegram && (
+                  <button
+                    type="button"
+                    onClick={() => setMethod("stars")}
+                    className={`rounded-xl border p-3.5 text-left transition ${
+                      method === "stars"
+                        ? "border-[#00c980] bg-[#00c980]/10"
+                        : "border-white/10 bg-white/[0.02] hover:border-white/25"
+                    }`}
+                  >
+                    <Star className="h-5 w-5 mb-1.5 text-[#2AABEE]" />
+                    <p className="text-xs font-bold text-white">Telegram Stars</p>
+                    <p className="text-[10px] text-gray-400">Pay from Telegram</p>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {method === "paystack" && (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-4">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-[#0ba4db]" /> Paystack Checkout
+                </h3>
+                <p className="text-xs text-gray-400">
+                  Pay {order ? formatCurrency(order.totalAmount) : ""} in Naira with card,
+                  bank transfer, or USSD. You&apos;ll be redirected to Paystack&apos;s secure page and
+                  returned here after payment.
+                </p>
+                <button
+                  type="button"
+                  onClick={payWithPaystack}
+                  disabled={altPaying}
+                  className="w-full rounded-xl bg-[#0ba4db] py-3.5 font-bold text-white text-sm hover:bg-[#0990c2] transition disabled:opacity-50 shadow-lg shadow-[#0ba4db]/20"
+                >
+                  {altPaying ? "Redirecting..." : `Pay ${order ? formatCurrency(order.totalAmount) : ""} with Paystack`}
+                </button>
+              </div>
+            )}
+
+            {method === "stars" && inTelegram && (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 space-y-4">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Star className="h-4 w-4 text-[#2AABEE]" /> Telegram Stars
+                </h3>
+                <p className="text-xs text-gray-400">
+                  Pay instantly with the Stars balance in your Telegram account — no card
+                  or wallet needed. Telegram handles the payment natively.
+                </p>
+                <button
+                  type="button"
+                  onClick={payWithTelegramStars}
+                  disabled={altPaying}
+                  className="w-full rounded-xl bg-[#2AABEE] py-3.5 font-bold text-white text-sm hover:bg-[#229ED9] transition disabled:opacity-50 shadow-lg shadow-[#2AABEE]/20"
+                >
+                  {altPaying ? "Opening invoice..." : "Pay with Telegram Stars"}
+                </button>
+              </div>
+            )}
+
+            {method === "crypto" && (
+            <>
             {/* BALANCE GUARDRAIL - INSUFFICIENT FUNDS PANEL */}
             {isInsufficientFunds ? (
               <div className="space-y-6">
@@ -580,9 +786,9 @@ function CheckoutContent() {
                   </div>
 
                   <div>
-                    <span className="text-[10px] text-gray-500 font-bold uppercase block mb-1">
-                      Funding Address (Base Sepolia)
-                    </span>
+                      <span className="text-[10px] text-gray-500 font-bold uppercase block mb-1">
+                        Funding Address ({IS_TESTNET ? "Base Sepolia" : "Base Mainnet"})
+                      </span>
                     <div className="flex items-center justify-between rounded-lg bg-black/40 px-3 py-2 border border-white/5">
                       <span className="text-xs font-mono text-[#00c980] truncate mr-2 select-all">
                         {walletAddress}
@@ -607,6 +813,7 @@ function CheckoutContent() {
                       <p className="text-lg font-bold font-mono text-white">{ethBalance} ETH</p>
                     </div>
                     <div className="flex gap-2">
+                      {IS_TESTNET && (
                       <button
                         type="button"
                         onClick={() => handleRequestFaucet()}
@@ -616,6 +823,7 @@ function CheckoutContent() {
                         {isFunding && <Loader2 className="h-3 w-3 animate-spin text-[#00c980]" />}
                         Get Faucet ETH
                       </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => checkBalance()}
@@ -660,7 +868,7 @@ function CheckoutContent() {
                     <Wallet className="h-4 w-4 text-[#00c980]" /> Privy/Dynamic Embedded Wallet
                   </h3>
                   <p className="text-xs text-gray-400 mb-3">
-                    Your email-linked smart account has been dynamically initialized on Base Sepolia.
+                    Your email-linked smart account has been dynamically initialized on {IS_TESTNET ? "Base Sepolia (testnet)" : "Base Mainnet"}.
                   </p>
 
                   {/* Wallet Info Card */}
@@ -726,6 +934,7 @@ function CheckoutContent() {
                         </p>
                       </div>
                       <div className="flex gap-2">
+                        {IS_TESTNET && (
                         <button
                           type="button"
                           onClick={() => handleRequestFaucet()}
@@ -735,6 +944,7 @@ function CheckoutContent() {
                           {isFunding && <Loader2 className="h-3 w-3 animate-spin text-[#00c980]" />}
                           Get Faucet ETH
                         </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => checkBalance()}
@@ -792,13 +1002,13 @@ function CheckoutContent() {
                         <p className="text-sm text-gray-300">Preparing transaction details and signing transaction...</p>
                       )}
                       {paymentStatus === "broadcasting" && (
-                        <p className="text-sm text-gray-300">Broadcasting transaction to Base Sepolia blockchain...</p>
+                        <p className="text-sm text-gray-300">Broadcasting transaction to the Base blockchain...</p>
                       )}
                       {paymentStatus === "confirming" && (
                         <div className="space-y-2">
                           <p className="text-sm text-gray-300">Waiting for on-chain block confirmations...</p>
                           <a
-                            href={`https://sepolia.basescan.org/tx/${txHash}`}
+                            href={`https://${BASESCAN}/tx/${txHash}`}
                             target="_blank"
                             rel="noreferrer"
                             className="text-xs text-[#00c980] font-mono hover:underline inline-block truncate max-w-xs"
@@ -831,6 +1041,8 @@ function CheckoutContent() {
                   )}
                 </div>
               </div>
+            )}
+            </>
             )}
           </div>
         )}

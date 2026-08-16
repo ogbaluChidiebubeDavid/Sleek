@@ -1,7 +1,8 @@
 import { ethers } from "ethers";
 
-// Default to Base Sepolia public RPC
-const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "https://sepolia.base.org";
+// Default to Base Mainnet for real funds. Set NEXT_PUBLIC_RPC_URL to a
+// Sepolia RPC to go back to testnet.
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "https://mainnet.base.org";
 const PAYMENT_ROUTER_ADDRESS = process.env.NEXT_PUBLIC_PAYMENT_ROUTER_ADDRESS || "0x9c32A15535C578c7F2B75A57CD7E44243F7BEc5e";
 
 // Simple mapping for Currency to ETH rate (1 ETH = 3,500,000 NGN or ~2,300 USD)
@@ -43,7 +44,9 @@ export const PAYMENT_ROUTER_ABI = [
   "event PaymentRouted(address indexed buyer, address indexed vendor, uint256 totalAmount, uint256 platformFee, uint256 vendorAmount, string orderId)"
 ];
 
-// Faucet funding for user wallet during demo/testnet run
+// Faucet funding for user wallet during demo/testnet run. Always pinned
+// to Sepolia — never the app RPC — so a configured faucet key can only
+// ever dispense testnet ETH.
 export async function fundWallet(targetAddress: string, amountEth = "0.01"): Promise<string | null> {
   const faucetKey = process.env.FAUCET_PRIVATE_KEY;
   if (!faucetKey) {
@@ -52,7 +55,7 @@ export async function fundWallet(targetAddress: string, amountEth = "0.01"): Pro
   }
 
   try {
-    const provider = getProvider();
+    const provider = new ethers.JsonRpcProvider("https://sepolia.base.org");
     const faucetWallet = new ethers.Wallet(faucetKey, provider);
     
     console.log(`[Blockchain] Faucet sending ${amountEth} ETH to ${targetAddress}...`);

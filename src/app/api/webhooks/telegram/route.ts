@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 
 const WELCOME_TEXT = `Welcome to Sleek Footwear Co. 👟
 
@@ -28,6 +29,61 @@ export async function POST(req: NextRequest) {
   try {
     update = await req.json();
   } catch {
+    return NextResponse.json({ ok: true });
+  }
+
+  // Telegram Stars payments: approve the pre-checkout and finalize the
+  // order when the payment succeeds.
+  if (update?.pre_checkout_query) {
+    const q = update.pre_checkout_query;
+    const order = await prisma.order.findUnique({
+      where: { id: q.invoice_payload },
+    });
+    const ok = !!order && order.paymentStatus !== "paid";
+    await fetch(
+      `https://api.telegram.org/bot${botToken}/answerPreCheckoutQuery`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pre_checkout_query_id: q.id,
+          ok,
+          ...(ok ? {} : { error_message: "Order not found or already paid." }),
+        }),
+      }
+    ).catch((err) =>
+      console.error("[Telegram] answerPreCheckoutQuery failed:", err)
+    );
+    return NextResponse.json({ ok: true });
+  }
+
+  if (update?.message?.successful_payment) {
+    const sp = update.message.successful_payment;
+    const order = await prisma.order.findUnique({
+      where: { id: sp.invoice_payload },
+      include: { items: { include: { product: true } } },
+    });
+    if (order && order.paymentStatus !== "paid") {
+      const vendorId = order.items[0]?.product?.vendorId ?? null;
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          paymentStatus: "paid",
+          status: "processing",
+          paymentMethod: "telegram_stars",
+          paymentRef: sp.telegram_payment_charge_id,
+          vendorId,
+        },
+      }).catch((err) => console.error("[Telegram] order update failed:", err));
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: update.message.chat.id,
+          text: `Payment received ✅\n\nOrder ${order.trackingNumber} is confirmed and being processed. You paid ${sp.total_amount} Stars.`,
+        }),
+      }).catch(() => {});
+    }
     return NextResponse.json({ ok: true });
   }
 
