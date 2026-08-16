@@ -12,8 +12,20 @@ export interface PaymentInitResult {
   raw?: unknown;
 }
 
+// Set per-request by the payment init route so callback URLs always
+// match the public domain the request came in on.
+let appUrlOverride: string | null = null;
+
+export function setAppUrlOverride(url: string) {
+  appUrlOverride = url;
+}
+
 function getAppUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  return (
+    appUrlOverride ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "https://sleek-brown.vercel.app"
+  );
 }
 
 export async function initPaystack(

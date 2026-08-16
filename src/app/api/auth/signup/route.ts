@@ -9,6 +9,7 @@ const schema = z.object({
   token: z.string().optional(),
   name: z.string().optional(),
   email: z.string().email().optional(),
+  password: z.string().min(4).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  let { phone, token, name, email } = parsed.data;
+  let { phone, token, name, email, password } = parsed.data;
   if (token) {
     phone = decryptPhone(token);
   }
@@ -28,8 +29,8 @@ export async function POST(req: NextRequest) {
 
   let user = await prisma.user.upsert({
     where: { phone },
-    create: { phone, name, email },
-    update: { name, email },
+    create: { phone, name, email, password },
+    update: { name, email, ...(password ? { password } : {}) },
   });
 
   // Provision a crypto wallet at signup so the user can pay with
@@ -45,5 +46,5 @@ export async function POST(req: NextRequest) {
   const cart = await prisma.cart.findUnique({ where: { userId: user.id } });
   if (!cart) await prisma.cart.create({ data: { userId: user.id } });
 
-  return NextResponse.json({ user: { id: user.id, phone: user.phone, name: user.name } });
+  return NextResponse.json({ user: { id: user.id, phone: user.phone, name: user.name }, walletAddress: user.walletAddress });
 }

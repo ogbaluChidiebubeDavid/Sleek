@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { generateTrackingNumber } from "@/lib/utils";
 import { sendInteractiveButtons } from "@/lib/whatsapp";
 import { decryptPhone, encryptPhone } from "@/lib/crypto";
+import { getBaseUrl } from "@/lib/request";
 
 export async function POST(req: NextRequest) {
   let { phone, token, selectedItems } = await req.json();
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl = getBaseUrl(req);
   const checkoutUrl = `${baseUrl}/checkout/${order.id}?token=${encodeURIComponent(encryptPhone(phone))}`;
 
   return NextResponse.json({ orderId: order.id, checkoutUrl, trackingNumber: order.trackingNumber });

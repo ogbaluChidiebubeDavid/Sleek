@@ -6,11 +6,17 @@ import {
   initCryptomus,
   initOpay,
   PaymentProvider,
+  setAppUrlOverride,
 } from "@/lib/payments";
+import { getBaseUrl } from "@/lib/request";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req: NextRequest) {
   const { orderId, provider, email } = await req.json();
+
+  // Callback/redirect URLs must point at the public domain the request
+  // arrived on, not localhost.
+  setAppUrlOverride(getBaseUrl(req));
 
   if (!orderId || !provider) {
     return NextResponse.json({ error: "orderId and provider required" }, { status: 400 });

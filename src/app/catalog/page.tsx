@@ -64,6 +64,8 @@ function CatalogContent() {
   const [selectedCartKeys, setSelectedCartKeys] = useState<Set<string>>(new Set());
   const [signupError, setSignupError] = useState("");
   const [signupSubmitting, setSignupSubmitting] = useState(false);
+  const [password, setPassword] = useState("");
+  const [accountReady, setAccountReady] = useState(false);
 
   // Telegram Mini App auth can take a moment; every cart/checkout
   // operation awaits this so nothing is sent without a valid token.
@@ -83,6 +85,7 @@ function CatalogContent() {
         .then((data) => {
           if (data.token) {
             setToken(data.token);
+            setAccountReady(!!data.hasAccount);
             return data.token as string;
           }
           console.error("Telegram auth rejected:", data.error);
@@ -292,9 +295,21 @@ function CatalogContent() {
     showToast(`Removed ${product.name} from cart.`);
   };
 
+  // Gate: Telegram users must complete signup before checking out
+  const requireAccount = (): boolean => {
+    if (inTelegram && !accountReady) {
+      setSignupError("");
+      setSignupOpen(true);
+      showToast("Please create your account first to continue.");
+      return false;
+    }
+    return true;
+  };
+
   const checkout = async () => {
     const tok = await ensureToken();
     if ((!tok && !rawPhone) || !cart.length) return;
+    if (!requireAccount()) return;
 
     const selectedItems = cart
       .filter((item) => {
@@ -344,6 +359,10 @@ function CatalogContent() {
       setSignupError("Please enter a valid email address.");
       return;
     }
+    if (password.trim().length < 4) {
+      setSignupError("Password must be at least 4 characters.");
+      return;
+    }
     setSignupSubmitting(true);
     setSignupError("");
     try {
@@ -354,11 +373,18 @@ function CatalogContent() {
           ...(tok ? { token: tok } : { phone: rawPhone }),
           name: name.trim(),
           email: email.trim(),
+          password: password.trim(),
         }),
       });
       if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setAccountReady(true);
       setSignupOpen(false);
-      showToast("Welcome to Sleek! Your account is ready. 🎉");
+      showToast(
+        data.walletAddress
+          ? `Account ready! Your crypto wallet: ${data.walletAddress.slice(0, 8)}...${data.walletAddress.slice(-6)}`
+          : "Welcome to Sleek! Your account is ready. 🎉"
+      );
     } catch (err) {
       console.error("Signup failed:", err);
       setSignupError("Signup failed — please try again.");
@@ -557,6 +583,7 @@ function CatalogContent() {
                       };
                       await addToCart(p, qty);
                       const tok = await ensureToken();
+                      if (!requireAccount()) return;
                       try {
                         const res = await fetch("/api/checkout-from-catalog", {
                           method: "POST",
@@ -710,6 +737,13 @@ function CatalogContent() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+            />
+            <input
+              className="mb-2 w-full rounded-lg bg-[#2a3942] px-3 py-2 text-sm"
+              placeholder="Password (your checkout PIN)"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
             {signupError && (
               <p className="mb-2 text-xs text-red-400">{signupError}</p>

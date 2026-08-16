@@ -69,5 +69,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     token: encryptPhone(phone),
     user: { id: user.id, name: user.name },
+    hasAccount: !!(user.name && user.email && user.password),
+    walletAddress: user.walletAddress,
   });
 }
