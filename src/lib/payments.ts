@@ -39,7 +39,7 @@ export async function initPaystack(
     return {
       provider: "paystack",
       reference,
-      authorizationUrl: `${getAppUrl()}/checkout/demo?ref=${reference}&provider=paystack`,
+      authorizationUrl: `${getAppUrl()}/checkout/demo?ref=${reference}&provider=paystack&orderId=${metadata.orderId}`,
     };
   }
 
@@ -74,7 +74,7 @@ export async function initFlutterwave(
     return {
       provider: "flutterwave",
       reference,
-      authorizationUrl: `${getAppUrl()}/checkout/demo?ref=${reference}&provider=flutterwave`,
+      authorizationUrl: `${getAppUrl()}/checkout/demo?ref=${reference}&provider=flutterwave&orderId=${metadata.orderId}`,
     };
   }
 
@@ -115,7 +115,7 @@ export async function initCryptomus(
     return {
       provider: "cryptomus",
       reference,
-      invoiceUrl: `${getAppUrl()}/checkout/demo?ref=${reference}&provider=cryptomus`,
+      invoiceUrl: `${getAppUrl()}/checkout/demo?ref=${reference}&provider=cryptomus&orderId=${metadata.orderId}`,
     };
   }
 
@@ -242,9 +242,10 @@ export async function markOrderPaid(orderId: string, ref: string, method: string
     include: { user: true, items: true },
   });
 
-  await prisma.cartItem.deleteMany({
-    where: { cart: { userId: order.userId } },
-  });
+  // Cart items belonging to this order were already removed by
+  // checkout-from-catalog / initiateCheckout when the order was created.
+  // Do NOT delete the user's remaining cart — they may have added more
+  // items while the order was awaiting payment.
 
   await sendPaymentReceipt(order.user.phone, order.id);
   return order;

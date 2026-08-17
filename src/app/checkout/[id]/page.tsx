@@ -20,6 +20,7 @@ import {
   CreditCard,
   Star,
   ArrowLeft,
+  ShoppingCart,
 } from "lucide-react";
 import { ethers } from "ethers";
 
@@ -135,6 +136,9 @@ function CheckoutContent() {
   const [keepIds, setKeepIds] = useState<Set<string>>(new Set());
   const [itemsUpdating, setItemsUpdating] = useState(false);
   const keepIdsInit = useRef(false);
+
+  // Forgot-items reminder popup shown before the user pays.
+  const [showForgotItems, setShowForgotItems] = useState(false);
 
   useEffect(() => {
     setInTelegram(!!getTelegramWebApp());
@@ -373,6 +377,15 @@ function CheckoutContent() {
         window.location.href = data.authorizationUrl;
         return; // page navigates away
       }
+      // Order was deleted/expired between page load and payment init
+      if (res.status === 404 || data.error?.includes("not found")) {
+        alert("This order could not be found. Returning to the catalogue — please try checking out again.");
+        const backUrl = tokenParam
+          ? `/catalog?token=${encodeURIComponent(tokenParam)}`
+          : `/catalog${phone ? `?phone=${encodeURIComponent(phone)}` : ""}`;
+        window.location.href = backUrl;
+        return;
+      }
       alert(
         data.error ||
           "Could not start Paystack checkout. Check that PAYSTACK_SECRET_KEY is configured."
@@ -569,11 +582,30 @@ function CheckoutContent() {
   }
 
   if (!order) {
+    const backUrl = tokenParam
+      ? `/catalog?token=${encodeURIComponent(tokenParam)}`
+      : `/catalog${phone ? `?phone=${encodeURIComponent(phone)}` : ""}`;
+
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white p-6 text-center">
-        <div>
-          <p className="text-red-400 font-bold mb-2">Order Not Found</p>
-          <p className="text-gray-500 text-sm">Verify your checkout link or contact support.</p>
+        <div className="max-w-sm space-y-4">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20">
+            <AlertTriangle className="h-6 w-6 text-red-400" />
+          </div>
+          <p className="text-red-400 font-bold text-lg">Order Not Found</p>
+          <p className="text-gray-500 text-sm leading-relaxed">
+            This checkout link may have expired or the order was returned to your cart.
+            Your items are safe — start a new checkout below.
+          </p>
+          <a
+            href={backUrl}
+            className="block w-full rounded-xl bg-[#00c980] py-3.5 font-bold text-white text-sm hover:bg-[#059669] transition shadow-lg shadow-[#00c980]/20"
+          >
+            Return to Catalogue
+          </a>
+          <p className="text-[11px] text-gray-600">
+            If you believe this is an error, contact support with your order reference.
+          </p>
         </div>
       </div>
     );
@@ -794,6 +826,54 @@ function CheckoutContent() {
         {/* STEP 2: WALLET CREATION & ON-CHAIN PAYMENT */}
         {step === "payment" && (
           <div className="space-y-6">
+            {/* FORGOT-ITEMS REMINDER — shown before the user picks a method */}
+            {showForgotItems ? (
+              <div className="rounded-2xl border border-[#00c980]/20 bg-[#00c980]/5 p-5 text-center space-y-3">
+                <h3 className="text-sm font-bold text-white flex items-center justify-center gap-2">
+                  <ShoppingCart className="h-4 w-4 text-[#00c980]" />
+                  Almost there! 🛒
+                </h3>
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  You&apos;re about to pay for{" "}
+                  <span className="font-semibold text-white">
+                    {order.items.length} item{order.items.length > 1 ? "s" : ""}
+                  </span>{" "}
+                  totalling{" "}
+                  <span className="font-bold text-[#00c980]">{formatCurrency(order.totalAmount)}</span>.
+                </p>
+                <p className="text-[11px] text-gray-400">
+                  Forgot to add something? Use the back button to return everything to your cart
+                  and keep shopping — or proceed to payment below.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotItems(false)}
+                  className="w-full rounded-xl bg-[#00c980] py-3 font-bold text-white text-sm hover:bg-[#059669] transition shadow-lg shadow-[#00c980]/20 active:scale-[0.98]"
+                >
+                  I&apos;m ready to pay
+                </button>
+                <button
+                  type="button"
+                  onClick={abandonCheckout}
+                  disabled={itemsUpdating}
+                  className="w-full rounded-xl bg-white/10 hover:bg-white/20 py-3 text-sm font-semibold transition text-white disabled:opacity-50"
+                >
+                  ← Add more items to cart
+                </button>
+              </div>
+            ) : (
+              /* Back button — return everything to cart and keep shopping */
+              <button
+                type="button"
+                onClick={() => setShowForgotItems(true)}
+                disabled={itemsUpdating}
+                className="w-full rounded-xl border border-[#00c980]/20 bg-[#00c980]/5 py-2.5 text-xs font-semibold text-[#00c980] hover:bg-[#00c980]/10 transition text-left flex items-center gap-2 disabled:opacity-50"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Forgot something? Add more items
+              </button>
+            )}
+
             {/* PAYMENT METHOD CHOOSER */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
