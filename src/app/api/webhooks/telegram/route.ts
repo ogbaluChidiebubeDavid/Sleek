@@ -75,6 +75,24 @@ export async function POST(req: NextRequest) {
           vendorId,
         },
       }).catch((err) => console.error("[Telegram] order update failed:", err));
+      // Payment succeeded — remove the purchased items from the user's cart.
+      const cart = await prisma.cart
+        .findUnique({ where: { userId: order.userId } })
+        .catch(() => null);
+      if (cart) {
+        await prisma.cartItem
+          .deleteMany({
+            where: {
+              cartId: cart.id,
+              OR: order.items.map((i) => ({
+                productId: i.productId,
+                color: i.color,
+                size: i.size,
+              })),
+            },
+          })
+          .catch(() => {});
+      }
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

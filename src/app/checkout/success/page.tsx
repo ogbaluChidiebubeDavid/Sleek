@@ -21,6 +21,9 @@ function SuccessContent() {
   } | null>(null);
 
   useEffect(() => {
+    try {
+      localStorage.removeItem("sleek_cart_backup");
+    } catch (e) {}
     if (!orderId) return;
     fetch(`/api/orders/${orderId}`)
       .then((r) => r.json())
@@ -28,7 +31,7 @@ function SuccessContent() {
       .catch(console.error);
   }, [orderId]);
 
-  const inTelegram = isTelegramWebApp();
+  const inTelegram = isTelegramWebApp() || (order as any)?.user?.phone?.startsWith("tg:");
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center px-6 text-center">

@@ -47,11 +47,21 @@ export function getTelegramBotLink(message?: string) {
 export function getTelegramWebApp(): any | null {
   if (typeof window === "undefined") return null;
   const tg = (window as any).Telegram?.WebApp;
-  return tg && tg.initData ? tg : null;
+  if (!tg) return null;
+  // Valid in Telegram Mini App if WebApp object is present and initialized
+  return tg;
 }
 
 export function isTelegramWebApp(): boolean {
-  return getTelegramWebApp() !== null;
+  if (typeof window === "undefined") return false;
+  const tg = (window as any).Telegram?.WebApp;
+  if (!tg) return false;
+  return Boolean(
+    tg.initData ||
+    tg.initDataUnsafe?.user ||
+    (tg.platform && tg.platform !== "unknown") ||
+    window.location.search.includes("tgWebAppData")
+  );
 }
 
 /** Closes the mini app and returns the user to their chat. */

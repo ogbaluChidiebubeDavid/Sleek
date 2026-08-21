@@ -86,14 +86,27 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Clear the cart
-    await prisma.cartItem.deleteMany({
-      where: { cart: { userId: order.userId } },
-    });
+    // Remove only the purchased items from the cart (items were kept in
+    // the cart through checkout so a failed payment wouldn't wipe it).
+    const cart = await prisma.cart.findUnique({ where: { userId: order.userId } });
+    if (cart) {
+      await prisma.cartItem.deleteMany({
+        where: {
+          cartId: cart.id,
+          OR: order.items.map((i) => ({
+            productId: i.productId,
+            color: i.color,
+            size: i.size,
+          })),
+        },
+      });
+    }
 
-    // Send receipt via WhatsApp Business API
+    // Receipts are best-effort — Telegram-only users have no WhatsApp number.
     const { sendPaymentReceipt } = await import("@/lib/conversation");
-    await sendPaymentReceipt(order.user.phone, order.id);
+    await sendPaymentReceipt(order.user.phone, order.id).catch((err) =>
+      console.error("[Crypto Complete] WhatsApp receipt failed:", err)
+    );
 
     // Send receipt via HTML email notification
     const { sendEmailReceipt } = await import("@/lib/email");

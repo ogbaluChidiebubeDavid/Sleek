@@ -49,9 +49,12 @@ export async function POST(req: NextRequest) {
     0
   );
 
+  const vendorId = itemsToCheckout[0]?.product?.vendorId || null;
+
   const order = await prisma.order.create({
     data: {
       userId: user.id,
+      vendorId,
       trackingNumber: generateTrackingNumber(),
       totalAmount: total,
       status: "awaiting_payment",
@@ -68,13 +71,9 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Delete checked out items from CartItem table
-  const itemIdsToDelete = itemsToCheckout.map((i) => i.id);
-  await prisma.cartItem.deleteMany({
-    where: {
-      id: { in: itemIdsToDelete },
-    },
-  });
+  // NOTE: cart items are intentionally kept until payment succeeds —
+  // a failed/abandoned checkout must not wipe the user's cart. They are
+  // removed in markOrderPaid / crypto-complete once the order is paid.
 
   const baseUrl = getBaseUrl(req);
   const checkoutUrl = `${baseUrl}/checkout/${order.id}?token=${encodeURIComponent(encryptPhone(phone))}`;

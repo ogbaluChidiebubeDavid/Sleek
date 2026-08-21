@@ -26,7 +26,14 @@ export async function GET(req: NextRequest) {
       walletAddress: vendor.walletAddress,
       businessName: vendor.businessName,
       email: vendor.email,
+      phone: vendor.phone,
       kycStatus: vendor.kycStatus,
+      bankName: vendor.bankName,
+      bankCode: vendor.bankCode,
+      accountNumber: vendor.accountNumber,
+      accountName: vendor.accountName,
+      paystackSubaccountCode: vendor.paystackSubaccountCode,
+      fiatBalance: vendor.fiatBalance || 0,
     });
   } catch (error: any) {
     console.error("[Vendor Info GET API] Error:", error);

@@ -164,15 +164,19 @@ function CheckoutContent() {
           setShippingCity(data.user.shippingCity || "");
           setShippingCountry(data.user.shippingCountry || "Nigeria");
 
-          // Existing users go straight to the payment chooser — the PIN
+          if (data.user.walletAddress) {
+            setWalletAddress(data.user.walletAddress);
+            checkBalance(data.user.walletAddress);
+          }
+
+          const isTgUser = data.user.phone?.startsWith("tg:") || !!getTelegramWebApp();
+          if (isTgUser) {
+            setMethod("paystack");
+          }
+
+          // Existing users or Telegram users go straight to payment chooser — PIN
           // is only requested when they choose to pay with crypto.
-          if (data.user.password) {
-            // Address + balance are safe to show pre-auth; the private key
-            // stays locked until the PIN is verified at crypto checkout.
-            if (data.user.walletAddress) {
-              setWalletAddress(data.user.walletAddress);
-              checkBalance(data.user.walletAddress);
-            }
+          if (data.user.password || isTgUser) {
             setStep("payment");
           }
         }
@@ -367,9 +371,9 @@ function CheckoutContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          orderId,
+          orderId: order.id,
           provider: "paystack",
-          email: shippingEmail || order.user.email || "",
+          email: shippingEmail || order.user?.shippingEmail || order.user?.email || "customer@sleek.shop",
         }),
       });
       const data = await res.json();
@@ -611,7 +615,8 @@ function CheckoutContent() {
     );
   }
 
-  const isNewUser = !order.user?.password;
+  const isTelegramUser = order.user?.phone?.startsWith("tg:") || inTelegram;
+  const isNewUser = !order.user?.password && !isTelegramUser;
   const priceInEth = (order.totalAmount / ETH_RATE_NGN).toFixed(6);
   const isInsufficientFunds = parseFloat(ethBalance) < parseFloat(priceInEth);
 

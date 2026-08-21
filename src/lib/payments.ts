@@ -24,7 +24,7 @@ function getAppUrl() {
   return (
     appUrlOverride ||
     process.env.NEXT_PUBLIC_APP_URL ||
-    "https://sleek-brown.vercel.app"
+    "https://www.seekfeet.xyz"
   );
 }
 
@@ -32,7 +32,8 @@ export async function initPaystack(
   email: string,
   amount: number,
   reference: string,
-  metadata: Record<string, string>
+  metadata: Record<string, string>,
+  subaccountCode?: string | null
 ): Promise<PaymentInitResult> {
   const secret = process.env.PAYSTACK_SECRET_KEY;
   if (!secret) {
@@ -43,15 +44,28 @@ export async function initPaystack(
     };
   }
 
+  // Calculate 5% platform commission (in kobo)
+  const amountKobo = Math.round(amount * 100);
+  const platformFeeKobo = Math.round(amountKobo * 0.05);
+
+  const payload: Record<string, any> = {
+    email: email || "customer@sleek.shop",
+    amount: amountKobo,
+    reference,
+    callback_url: `${getAppUrl()}/api/payments/callback/paystack?orderId=${metadata.orderId}`,
+    metadata,
+  };
+
+  // If vendor has an active Paystack Subaccount, route the split in real time
+  if (subaccountCode) {
+    payload.subaccount = subaccountCode;
+    payload.transaction_charge = platformFeeKobo;
+    payload.bearer = "subaccount";
+  }
+
   const res = await axios.post(
     "https://api.paystack.co/transaction/initialize",
-    {
-      email: email || "customer@sleek.shop",
-      amount: Math.round(amount * 100),
-      reference,
-      callback_url: `${getAppUrl()}/api/payments/callback/paystack?orderId=${metadata.orderId}`,
-      metadata,
-    },
+    payload,
     { headers: { Authorization: `Bearer ${secret}` } }
   );
 
@@ -231,6 +245,13 @@ export async function markOrderPaid(orderId: string, ref: string, method: string
   const { prisma } = await import("@/lib/db");
   const { sendPaymentReceipt } = await import("@/lib/conversation");
 
+  const existing = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { items: { include: { product: true } } },
+  });
+
+  const vendorId = existing?.vendorId || existing?.items[0]?.product?.vendorId || null;
+
   const order = await prisma.order.update({
     where: { id: orderId },
     data: {
@@ -238,15 +259,44 @@ export async function markOrderPaid(orderId: string, ref: string, method: string
       status: "processing",
       paymentMethod: method,
       paymentRef: ref,
+      ...(vendorId ? { vendorId } : {}),
     },
-    include: { user: true, items: true },
+    include: { user: true, items: true, vendor: true },
   });
 
-  // Cart items belonging to this order were already removed by
-  // checkout-from-catalog / initiateCheckout when the order was created.
-  // Do NOT delete the user's remaining cart — they may have added more
-  // items while the order was awaiting payment.
+  // If paid via fiat (Paystack/Flutterwave/Opay/Demo) and vendor is linked,
+  // credit the vendor's fiat earnings (95% share, 5% platform fee) if not already split via Subaccount
+  if (vendorId && method !== "crypto") {
+    const vendorShare = Math.round(order.totalAmount * 0.95);
+    await prisma.vendor.update({
+      where: { id: vendorId },
+      data: { fiatBalance: { increment: vendorShare } },
+    }).catch((err) => console.error("[markOrderPaid] Failed to credit vendor fiat balance:", err));
+  }
 
-  await sendPaymentReceipt(order.user.phone, order.id);
+  // Now that payment succeeded, remove the purchased items from the
+  // user's cart (they were deliberately kept through checkout so a
+  // failed payment wouldn't wipe the cart).
+  const cart = await prisma.cart.findUnique({ where: { userId: order.userId } });
+  if (cart) {
+    await prisma.cartItem.deleteMany({
+      where: {
+        cartId: cart.id,
+        OR: order.items.map((i) => ({
+          productId: i.productId,
+          color: i.color,
+          size: i.size,
+        })),
+      },
+    });
+  }
+
+  // Receipts are best-effort: a messaging failure (e.g. Telegram-only
+  // users have no WhatsApp number) must never break the paid callback.
+  try {
+    await sendPaymentReceipt(order.user.phone, order.id);
+  } catch (err) {
+    console.error("[markOrderPaid] receipt delivery failed:", err);
+  }
   return order;
 }

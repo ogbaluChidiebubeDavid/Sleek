@@ -22,9 +22,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "orderId and provider required" }, { status: 400 });
   }
 
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: { user: true },
+  const order = await prisma.order.findFirst({
+    where: {
+      OR: [
+        { id: orderId },
+        { trackingNumber: orderId },
+        { paymentRef: orderId },
+      ],
+    },
+    include: {
+      user: true,
+      vendor: true,
+      items: {
+        include: {
+          product: {
+            include: {
+              vendor: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
@@ -33,10 +51,22 @@ export async function POST(req: NextRequest) {
   const metadata = { orderId: order.id, phone: order.user.phone };
   const amount = order.totalAmount;
 
+  // Resolve vendor subaccount code if available
+  const subaccountCode =
+    order.vendor?.paystackSubaccountCode ||
+    order.items[0]?.product?.vendor?.paystackSubaccountCode ||
+    null;
+
   let result;
   switch (provider as PaymentProvider) {
     case "paystack":
-      result = await initPaystack(email || "customer@sleek.shop", amount, reference, metadata);
+      result = await initPaystack(
+        email || "customer@sleek.shop",
+        amount,
+        reference,
+        metadata,
+        subaccountCode
+      );
       break;
     case "flutterwave":
       result = await initFlutterwave(email || "customer@sleek.shop", amount, reference, metadata);
@@ -52,7 +82,7 @@ export async function POST(req: NextRequest) {
   }
 
   await prisma.order.update({
-    where: { id: orderId },
+    where: { id: order.id },
     data: { paymentRef: reference, paymentMethod: provider },
   });
 

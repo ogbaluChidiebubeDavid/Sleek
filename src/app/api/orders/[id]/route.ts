@@ -7,8 +7,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const order = await prisma.order.findUnique({
-    where: { id },
+  const order = await prisma.order.findFirst({
+    where: {
+      OR: [
+        { id },
+        { trackingNumber: id },
+        { paymentRef: id },
+      ],
+    },
     include: {
       items: {
         include: {
@@ -42,7 +48,16 @@ export async function PATCH(
   let phone = body.phone;
   if (body.token) phone = decryptPhone(body.token);
 
-  const order = await prisma.order.findUnique({ where: { id }, include: { user: true } });
+  const order = await prisma.order.findFirst({
+    where: {
+      OR: [
+        { id },
+        { trackingNumber: id },
+        { paymentRef: id },
+      ],
+    },
+    include: { user: true },
+  });
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!phone || order.user.phone !== phone) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });

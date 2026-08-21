@@ -19,6 +19,11 @@ import {
   Copy,
   Check,
   ChevronDown,
+  Landmark,
+  Building2,
+  ShieldCheck,
+  CreditCard,
+  AlertCircle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { SleekLogo } from "@/components/brand/SleekLogo";
@@ -85,6 +90,17 @@ export default function VendorDashboard() {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawTxHash, setWithdrawTxHash] = useState<string | null>(null);
 
+  // Bank Account & Paystack Payout states
+  const [banks, setBanks] = useState<{ name: string; code: string }[]>([]);
+  const [selectedBankCode, setSelectedBankCode] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [verifiedAccountName, setVerifiedAccountName] = useState("");
+  const [isVerifyingBank, setIsVerifyingBank] = useState(false);
+  const [bankVerifyError, setBankVerifyError] = useState("");
+  const [isSavingBank, setIsSavingBank] = useState(false);
+  const [bankSaveSuccess, setBankSaveSuccess] = useState("");
+  const [showBankForm, setShowBankForm] = useState(false);
+
   // Copy & Dropdown states
   const [copied, setCopied] = useState<Record<string, boolean>>({});
   const [showAssetDropdown, setShowAssetDropdown] = useState(false);
@@ -106,8 +122,85 @@ export default function VendorDashboard() {
     }
     setVendorId(savedId);
     fetchData(savedId);
+
+    // Fetch Nigerian banks list
+    fetch("/api/vendor/banks")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.banks && Array.isArray(data.banks)) {
+          setBanks(data.banks);
+        }
+      })
+      .catch((e) => console.error("Failed to load bank list:", e));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleVerifyBank = async () => {
+    if (!selectedBankCode || bankAccountNumber.trim().length !== 10) {
+      setBankVerifyError("Please select a bank and enter a valid 10-digit account number.");
+      return;
+    }
+    setIsVerifyingBank(true);
+    setBankVerifyError("");
+    setVerifiedAccountName("");
+    try {
+      const res = await fetch("/api/vendor/verify-bank", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountNumber: bankAccountNumber.trim(),
+          bankCode: selectedBankCode,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.accountName) {
+        setVerifiedAccountName(data.accountName);
+      } else {
+        setBankVerifyError(data.error || "Could not verify bank account.");
+      }
+    } catch (err: any) {
+      setBankVerifyError("Bank verification request failed.");
+    } finally {
+      setIsVerifyingBank(false);
+    }
+  };
+
+  const handleSaveBank = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendorId || !selectedBankCode || !bankAccountNumber || !verifiedAccountName) {
+      alert("Please verify your account name before saving.");
+      return;
+    }
+    const bankObj = banks.find((b) => b.code === selectedBankCode);
+    const bankName = bankObj?.name || "Nigerian Bank";
+    setIsSavingBank(true);
+    setBankSaveSuccess("");
+    try {
+      const res = await fetch("/api/vendor/bank-details", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vendorId,
+          bankName,
+          bankCode: selectedBankCode,
+          accountNumber: bankAccountNumber.trim(),
+          accountName: verifiedAccountName,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setBankSaveSuccess("Bank account and Paystack automated split payouts connected successfully!");
+        setShowBankForm(false);
+        fetchData(vendorId);
+      } else {
+        alert(data.error || "Failed to save bank details");
+      }
+    } catch (err: any) {
+      alert("Failed to connect bank details. Please try again.");
+    } finally {
+      setIsSavingBank(false);
+    }
+  };
 
   const fetchData = async (id = vendorId) => {
     if (!id) return;
@@ -359,19 +452,32 @@ export default function VendorDashboard() {
 
         {/* STATS TILES CARD GRID */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5">
-            <span className="text-gray-500 text-xs font-semibold block uppercase">Total Balance (Naira)</span>
-            <p className="text-2xl font-bold mt-1 text-white font-mono">
-              {formatCurrency(parseFloat(vendorInfo?.balance || 0) * 3500000)}
-            </p>
-            <span className="text-[10px] text-green-400 font-medium flex items-center gap-1 mt-2">
-              <TrendingUp className="h-3 w-3" /> Order Revenue: {formatCurrency(totalRevenue)}
+          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <span className="text-gray-500 text-xs font-semibold block uppercase">Paystack / Fiat Sales</span>
+              <p className="text-2xl font-bold mt-1 text-white font-mono">
+                {formatCurrency(totalRevenue)}
+              </p>
+              <div className="mt-2 flex items-center gap-1.5">
+                {vendorInfo?.paystackSubaccountCode ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
+                    <ShieldCheck className="h-3 w-3" /> Auto Split Active
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
+                    <AlertCircle className="h-3 w-3" /> Bank Setup Needed
+                  </span>
+                )}
+              </div>
+            </div>
+            <span className="text-[10px] text-gray-500 block mt-2">
+              95% Vendor Payout • 5% Platform Fee
             </span>
           </div>
 
           <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 flex flex-col justify-between">
             <div>
-              <span className="text-gray-500 text-xs font-semibold block uppercase">Wallet Balance</span>
+              <span className="text-gray-500 text-xs font-semibold block uppercase">Crypto Balance</span>
               <p className="text-2xl font-bold mt-1 text-sleek-300 font-mono">
                 {vendorInfo?.balance || "0.0"} <span className="text-xs font-sans font-medium text-gray-400">ETH</span>
               </p>
@@ -384,7 +490,7 @@ export default function VendorDashboard() {
                 onClick={() => setShowWithdrawModal(true)}
                 className="w-full rounded-xl bg-sleek-500/10 hover:bg-sleek-500/20 border border-sleek-500/30 py-2 text-xs font-bold text-sleek-300 hover:text-white transition active:scale-95"
               >
-                Withdraw Funds
+                Withdraw Crypto
               </button>
               <span className="text-[9px] text-gray-500 text-center font-medium block">
                 Base Sepolia Testnet
@@ -407,6 +513,171 @@ export default function VendorDashboard() {
               <CheckCircle className="h-3 w-3" /> Delivered
             </span>
           </div>
+        </div>
+
+        {/* BANK ACCOUNT & DIRECT PAYSTACK PAYOUT CARD */}
+        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 backdrop-blur-md">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="p-3 bg-[#0ba4db]/10 border border-[#0ba4db]/20 rounded-2xl">
+                <Landmark className="h-6 w-6 text-[#0ba4db]" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  Direct Bank Account Payouts (Paystack Split)
+                  {vendorInfo?.paystackSubaccountCode ? (
+                    <span className="text-xs bg-green-500/10 text-green-400 border border-green-500/20 px-2 py-0.5 rounded-full font-medium">
+                      Connected
+                    </span>
+                  ) : (
+                    <span className="text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-2 py-0.5 rounded-full font-medium">
+                      Setup Required
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {vendorInfo?.paystackSubaccountCode
+                    ? `Settlements automatically deposit directly into ${vendorInfo.bankName || "your bank account"} on every Paystack sale.`
+                    : "Add your Nigerian bank account so customer Paystack payments automatically settle directly to you."}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowBankForm(!showBankForm)}
+              className="rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 text-xs font-bold text-white transition active:scale-95 shrink-0"
+            >
+              {showBankForm
+                ? "Close Form"
+                : vendorInfo?.paystackSubaccountCode
+                ? "Update Bank Details"
+                : "+ Connect Bank Account"}
+            </button>
+          </div>
+
+          {/* Current Saved Bank Account Display */}
+          {vendorInfo?.accountNumber && !showBankForm && (
+            <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-black/30 p-3.5 rounded-xl border border-white/5">
+                <span className="text-[10px] text-gray-500 uppercase font-bold block">Settlement Bank</span>
+                <p className="text-xs font-semibold text-white mt-0.5">{vendorInfo.bankName || "Bank"}</p>
+              </div>
+              <div className="bg-black/30 p-3.5 rounded-xl border border-white/5">
+                <span className="text-[10px] text-gray-500 uppercase font-bold block">Account Number</span>
+                <p className="text-xs font-mono font-semibold text-white mt-0.5">
+                  •••• {vendorInfo.accountNumber.slice(-4)}
+                </p>
+              </div>
+              <div className="bg-black/30 p-3.5 rounded-xl border border-white/5">
+                <span className="text-[10px] text-gray-500 uppercase font-bold block">Verified Account Name</span>
+                <p className="text-xs font-semibold text-green-400 mt-0.5 truncate">{vendorInfo.accountName || "Verified"}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Expandable Bank Connection Form */}
+          {showBankForm && (
+            <form onSubmit={handleSaveBank} className="mt-5 pt-5 border-t border-white/5 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Bank Select */}
+                <div>
+                  <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1.5">
+                    Select Nigerian Bank
+                  </label>
+                  <select
+                    value={selectedBankCode}
+                    onChange={(e) => {
+                      setSelectedBankCode(e.target.value);
+                      setVerifiedAccountName("");
+                      setBankVerifyError("");
+                    }}
+                    required
+                    className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:border-[#0ba4db] outline-none"
+                  >
+                    <option value="" className="bg-[#0c1015] text-gray-400">
+                      -- Select Bank --
+                    </option>
+                    {banks.map((b) => (
+                      <option key={b.code} value={b.code} className="bg-[#0c1015] text-white">
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Account Number & Verify */}
+                <div>
+                  <label className="block text-[10px] text-gray-400 uppercase font-bold mb-1.5">
+                    10-Digit NUBAN Account Number
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      maxLength={10}
+                      required
+                      placeholder="0123456789"
+                      value={bankAccountNumber}
+                      onChange={(e) => {
+                        setBankAccountNumber(e.target.value.replace(/\D/g, ""));
+                        setVerifiedAccountName("");
+                        setBankVerifyError("");
+                      }}
+                      className="flex-1 rounded-xl bg-white/[0.04] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:border-[#0ba4db] outline-none font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyBank}
+                      disabled={isVerifyingBank || !selectedBankCode || bankAccountNumber.length !== 10}
+                      className="rounded-xl bg-[#0ba4db]/20 hover:bg-[#0ba4db]/30 border border-[#0ba4db]/40 px-4 py-2.5 text-xs font-bold text-[#0ba4db] transition disabled:opacity-40"
+                    >
+                      {isVerifyingBank ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Account Name Confirmation Badge */}
+              {verifiedAccountName && (
+                <div className="bg-green-500/10 border border-green-500/20 p-3 rounded-xl flex items-center gap-2 text-xs text-green-400 font-semibold">
+                  <CheckCircle className="h-4 w-4 shrink-0 text-green-400" />
+                  <span>Account Verified: {verifiedAccountName}</span>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {bankVerifyError && (
+                <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-xl flex items-center gap-2 text-xs text-red-400 font-medium">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{bankVerifyError}</span>
+                </div>
+              )}
+
+              {/* Success Message */}
+              {bankSaveSuccess && (
+                <div className="bg-green-500/10 border border-green-500/20 p-3 rounded-xl flex items-center gap-2 text-xs text-green-400 font-medium">
+                  <Check className="h-4 w-4 shrink-0" />
+                  <span>{bankSaveSuccess}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBankForm(false)}
+                  className="rounded-xl px-4 py-2 text-xs text-gray-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingBank || !verifiedAccountName}
+                  className="rounded-xl bg-[#00c980] hover:bg-[#059669] px-6 py-2.5 text-xs font-bold text-white shadow-lg transition disabled:opacity-40"
+                >
+                  {isSavingBank ? "Connecting to Paystack..." : "Save & Activate Automated Payouts"}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
         {/* WORKSPACE DIVIDER GRID: PRODUCTS VS ORDERS */}

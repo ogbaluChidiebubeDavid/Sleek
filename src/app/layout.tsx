@@ -5,9 +5,17 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Sleek — Turn Chats into Footwear Sales",
   description:
-    "Buy footwear with Sleek AI on WhatsApp. Pay with Opay, crypto, Flutterwave, or Paystack.",
+    "Buy footwear with Sleek AI on WhatsApp and Telegram. Pay securely with Paystack, Opay, Flutterwave, or Crypto.",
   icons: {
-    icon: "/sleek-logo.png",
+    icon: [
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+      { url: "/sleek-logo.png", sizes: "192x192", type: "image/png" },
+      { url: "/sleek-logo.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
   },
 };
 

@@ -16,6 +16,6 @@ export function getBaseUrl(req: NextRequest): string {
     return `${proto}://${host}`;
   }
   return (
-    process.env.NEXT_PUBLIC_APP_URL || "https://sleek-brown.vercel.app"
+    process.env.NEXT_PUBLIC_APP_URL || "https://www.seekfeet.xyz"
   );
 }

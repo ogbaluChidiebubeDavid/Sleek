@@ -113,20 +113,26 @@ model ConversationState {
 }
 
 model Vendor {
-  id               String    @id @default(cuid())
-  email            String    @unique
-  password         String    @default("")
-  phone            String    @default("")
-  businessName     String
-  walletAddress    String
-  walletPrivateKey String
-  kycStatus        String    @default("pending") // pending, verified
-  kycFaceImage     String?
-  kycIdImage       String?
-  products         Product[]
-  orders           Order[]
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                     String    @id @default(cuid())
+  email                  String    @unique
+  password               String    @default("")
+  phone                  String    @default("")
+  businessName           String
+  walletAddress          String
+  walletPrivateKey       String
+  kycStatus              String    @default("pending") // pending, verified
+  kycFaceImage           String?
+  kycIdImage             String?
+  bankName               String?
+  bankCode               String?
+  accountNumber          String?
+  accountName            String?
+  paystackSubaccountCode String?
+  fiatBalance            Float     @default(0)
+  products               Product[]
+  orders                 Order[]
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 }
 
 model WebhookLog {

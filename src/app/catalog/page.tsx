@@ -260,24 +260,10 @@ function CatalogContent() {
     showToast(`Added ${qty} × ${product.name} (${variant.color}, Size ${variant.size}) to cart!`);
   };
 
-  // After an order is created: in Telegram go straight to the checkout
-  // page; on WhatsApp return to the chat where the checkout link lives.
+  // After an order is created: seamlessly navigate to the checkout page
+  // without cross-channel redirects. Cart items are preserved until payment succeeds.
   const proceedToCheckoutUrl = (checkoutUrl: string) => {
-    // Checked-out items are removed server-side; drop the local backup so
-    // they don't reappear (unselected items are re-merged from the server).
-    try {
-      localStorage.removeItem("sleek_cart_backup");
-    } catch (e) {}
-    if (inTelegram) {
-      window.location.href = checkoutUrl;
-      return;
-    }
-    try {
-      window.close();
-    } catch (e) {}
-    setTimeout(() => {
-      window.location.href = getWhatsAppLink("i want to check out");
-    }, 100);
+    window.location.href = checkoutUrl;
   };
 
   const toggleSelectItem = (key: string) => {
@@ -362,7 +348,6 @@ function CatalogContent() {
   const checkout = async () => {
     const tok = await ensureToken();
     if ((!tok && !rawPhone) || !cart.length) return;
-    if (!requireAccount()) return;
 
     const selectedLines = cart.filter((item) => {
       const key = `${item.product.id}-${item.color}-${item.size}`;
@@ -660,7 +645,6 @@ function CatalogContent() {
                       };
                       await addToCart(p, qty);
                       const tok = await ensureToken();
-                      if (!requireAccount()) return;
                       try {
                         const res = await fetch("/api/checkout-from-catalog", {
                           method: "POST",
@@ -889,22 +873,22 @@ function CatalogContent() {
         </div>
       )}
 
-      {inTelegram ? (
+      {inTelegram || token ? (
         <button
           type="button"
           onClick={closeTelegramApp}
-          className="fixed bottom-4 right-4 rounded-full bg-[#25D366] px-4 py-3 text-sm font-semibold shadow-lg"
+          className="fixed bottom-4 right-4 rounded-full bg-[#2AABEE] hover:bg-[#229ED9] px-4 py-3 text-sm font-semibold shadow-lg text-white transition flex items-center gap-2"
         >
-          Back to chat
+          Back to Telegram
         </button>
-      ) : (
+      ) : rawPhone && !rawPhone.startsWith("tg:") ? (
         <a
           href={getWhatsAppLink()}
-          className="fixed bottom-4 right-4 rounded-full bg-[#25D366] px-4 py-3 text-sm font-semibold shadow-lg"
+          className="fixed bottom-4 right-4 rounded-full bg-[#25D366] hover:bg-[#20bd5a] px-4 py-3 text-sm font-semibold shadow-lg text-white transition flex items-center gap-2"
         >
-          Back to chat
+          Back to WhatsApp
         </a>
-      )}
+      ) : null}
 
       {/* Elegant toast notification overlay */}
       {toast.show && (
