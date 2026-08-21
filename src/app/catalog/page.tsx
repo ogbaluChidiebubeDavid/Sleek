@@ -23,6 +23,12 @@ import {
   ShieldCheck,
   Key,
   LogOut,
+  Package,
+  Truck,
+  Mail,
+  Clock,
+  CheckCircle2,
+  ChevronRight,
 } from "lucide-react";
 
 type Product = {
@@ -81,10 +87,18 @@ function CatalogContent() {
   // User Profile & Auth Modal states
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authTab, setAuthTab] = useState<"profile" | "signin" | "signup">("profile");
+  const [profileSubTab, setProfileSubTab] = useState<"wallet" | "orders">("wallet");
   const [userWallet, setUserWallet] = useState("");
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [copiedWallet, setCopiedWallet] = useState(false);
+
+  // Purchase history states
+  const [userOrders, setUserOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [emailUpdateSubmitting, setEmailUpdateSubmitting] = useState<Record<string, boolean>>({});
+  const [emailUpdateSuccess, setEmailUpdateSuccess] = useState<Record<string, string>>({});
+  const [orderEmailInput, setOrderEmailInput] = useState<Record<string, string>>({});
   
   // Sign up fields
   const [name, setName] = useState("");
@@ -534,6 +548,62 @@ function CatalogContent() {
     }
   };
 
+  const fetchUserOrders = async () => {
+    const tok = await ensureToken();
+    if (!tok && !rawPhone) return;
+    setLoadingOrders(true);
+    try {
+      const url = tok
+        ? `/api/user/orders?token=${encodeURIComponent(tok)}`
+        : `/api/user/orders?phone=${encodeURIComponent(rawPhone)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.orders && Array.isArray(data.orders)) {
+        setUserOrders(data.orders);
+      }
+    } catch (e) {
+      console.error("Failed to fetch user orders:", e);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const handleSendEmailUpdate = async (orderId: string) => {
+    const emailToUse = orderEmailInput[orderId] || userEmail || email;
+    if (!emailToUse || !/^\S+@\S+\.\S+$/.test(emailToUse.trim())) {
+      alert("Please enter a valid email address.");
+      return;
+    }
+    setEmailUpdateSubmitting((prev) => ({ ...prev, [orderId]: true }));
+    setEmailUpdateSuccess((prev) => ({ ...prev, [orderId]: "" }));
+    try {
+      const tok = await ensureToken();
+      const res = await fetch("/api/user/orders/email-update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          email: emailToUse.trim(),
+          token: tok || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setEmailUpdateSuccess((prev) => ({
+          ...prev,
+          [orderId]: `Tracking updates linked to ${emailToUse.trim()}!`,
+        }));
+        setUserEmail(emailToUse.trim());
+      } else {
+        alert(data.error || "Failed to update email.");
+      }
+    } catch (e) {
+      alert("Request failed. Please try again.");
+    } finally {
+      setEmailUpdateSubmitting((prev) => ({ ...prev, [orderId]: false }));
+    }
+  };
+
   const cartTotal = cart.reduce((s, i) => {
     const key = `${i.product.id}-${i.color}-${i.size}`;
     if (selectedCartKeys.has(key)) {
@@ -885,7 +955,7 @@ function CatalogContent() {
                     </div>
                     <div>
                       <h3 className="font-bold text-sm text-white">{userName || "Sleek Customer"}</h3>
-                      <p className="text-[11px] text-gray-400">{userEmail || (inTelegram ? "Telegram Account" : "Active Session")}</p>
+                      <p className="text-[11px] text-gray-400">{userEmail || (inTelegram ? "Telegram Connected" : "Active Session")}</p>
                     </div>
                   </div>
                   <button
@@ -897,49 +967,201 @@ function CatalogContent() {
                   </button>
                 </div>
 
-                {/* Crypto Wallet Section */}
-                <div className="bg-[#2a3942] rounded-xl p-3.5 border border-white/5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-400 uppercase font-bold flex items-center gap-1.5">
-                      <Wallet className="h-3.5 w-3.5 text-[#25D366]" /> Connected Web3 Wallet
-                    </span>
-                    <span className="text-[10px] text-green-400 font-semibold bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
-                      Base Network
-                    </span>
-                  </div>
-
-                  {userWallet ? (
-                    <div>
-                      <p className="text-xs font-mono text-white break-all bg-black/30 p-2.5 rounded-lg border border-white/5 select-all">
-                        {userWallet}
-                      </p>
-                      <div className="flex justify-between items-center mt-2.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(userWallet);
-                            setCopiedWallet(true);
-                            setTimeout(() => setCopiedWallet(false), 2000);
-                          }}
-                          className="text-xs text-[#25D366] hover:text-[#20ba56] font-semibold flex items-center gap-1.5"
-                        >
-                          {copiedWallet ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                          {copiedWallet ? "Copied!" : "Copy Address"}
-                        </button>
-                        <a
-                          href={`https://basescan.org/address/${userWallet}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[11px] text-gray-400 hover:text-white flex items-center gap-1"
-                        >
-                          Basescan <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-gray-400">Wallet will be provisioned automatically upon checkout.</p>
-                  )}
+                {/* Subtabs: Wallet vs Purchase History */}
+                <div className="flex rounded-xl bg-black/40 p-1 border border-white/5 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setProfileSubTab("wallet")}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${
+                      profileSubTab === "wallet"
+                        ? "bg-[#25D366] text-gray-950 shadow"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Web3 Wallet
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileSubTab("orders");
+                      fetchUserOrders();
+                    }}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 ${
+                      profileSubTab === "orders"
+                        ? "bg-[#25D366] text-gray-950 shadow"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    <Package className="h-3.5 w-3.5" /> Purchase History
+                  </button>
                 </div>
+
+                {profileSubTab === "wallet" ? (
+                  /* Crypto Wallet Section */
+                  <div className="bg-[#2a3942] rounded-xl p-3.5 border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-gray-400 uppercase font-bold flex items-center gap-1.5">
+                        <Wallet className="h-3.5 w-3.5 text-[#25D366]" /> Connected Web3 Wallet
+                      </span>
+                      <span className="text-[10px] text-green-400 font-semibold bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
+                        Base Network
+                      </span>
+                    </div>
+
+                    {userWallet ? (
+                      <div>
+                        <p className="text-xs font-mono text-white break-all bg-black/30 p-2.5 rounded-lg border border-white/5 select-all">
+                          {userWallet}
+                        </p>
+                        <div className="flex justify-between items-center mt-2.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(userWallet);
+                              setCopiedWallet(true);
+                              setTimeout(() => setCopiedWallet(false), 2000);
+                            }}
+                            className="text-xs text-[#25D366] hover:text-[#20ba56] font-semibold flex items-center gap-1.5"
+                          >
+                            {copiedWallet ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                            {copiedWallet ? "Copied!" : "Copy Address"}
+                          </button>
+                          <a
+                            href={`https://basescan.org/address/${userWallet}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[11px] text-gray-400 hover:text-white flex items-center gap-1"
+                          >
+                            Basescan <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400">Wallet will be provisioned automatically upon checkout.</p>
+                    )}
+                  </div>
+                ) : (
+                  /* Purchase History Section */
+                  <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                    {loadingOrders ? (
+                      <div className="py-8 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+                        <Clock className="h-4 w-4 animate-spin text-[#25D366]" /> Loading your orders...
+                      </div>
+                    ) : userOrders.length === 0 ? (
+                      <div className="py-8 text-center bg-black/20 rounded-xl border border-white/5 p-4">
+                        <Package className="h-8 w-8 text-gray-500 mx-auto mb-2 opacity-50" />
+                        <p className="text-xs text-gray-400 font-medium">No purchases recorded yet.</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">Your completed orders and tracking numbers will appear here.</p>
+                      </div>
+                    ) : (
+                      userOrders.map((ord: any) => {
+                        const status = ord.status;
+                        const isPaid = ord.paymentStatus === "paid" || status !== "awaiting_payment";
+                        const isPackaging = status === "packaging" || status === "processing" || status === "shipped" || status === "delivered";
+                        const isShipped = status === "shipped" || status === "delivered";
+                        const isDelivered = status === "delivered";
+
+                        return (
+                          <div
+                            key={ord.id}
+                            className="bg-[#2a3942] rounded-xl p-3.5 border border-white/5 space-y-3"
+                          >
+                            {/* Order Header */}
+                            <div className="flex justify-between items-start border-b border-white/5 pb-2">
+                              <div>
+                                <span className="text-xs font-bold text-white font-mono block">
+                                  {ord.trackingNumber}
+                                </span>
+                                {ord.paymentRef && (
+                                  <span className="text-[10px] text-gray-400 font-mono block">
+                                    Ref: {ord.paymentRef}
+                                  </span>
+                                )}
+                                {ord.vendor?.businessName && (
+                                  <span className="text-[10px] text-sleek-300 font-medium block mt-0.5">
+                                    🏪 {ord.vendor.businessName}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xs font-bold text-[#25D366] font-mono block">
+                                  {formatCurrency(ord.totalAmount)}
+                                </span>
+                                <span className="text-[9px] uppercase font-bold text-gray-400 block mt-0.5">
+                                  {ord.paymentStatus}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* 4-Stage Fulfillment Stepper */}
+                            <div className="pt-1">
+                              <div className="flex justify-between items-center text-[9px] font-bold text-gray-400 mb-1.5">
+                                <span className={isPaid ? "text-green-400" : ""}>1. Paid</span>
+                                <span className={isPackaging ? "text-orange-400" : ""}>2. Packaging</span>
+                                <span className={isShipped ? "text-blue-400" : ""}>3. Shipped</span>
+                                <span className={isDelivered ? "text-green-400" : ""}>4. Delivered</span>
+                              </div>
+                              <div className="grid grid-cols-4 gap-1 h-1.5 bg-black/40 rounded-full overflow-hidden p-0.5">
+                                <div className={`rounded-full ${isPaid ? "bg-green-500" : "bg-white/10"}`} />
+                                <div className={`rounded-full ${isPackaging ? "bg-orange-500" : "bg-white/10"}`} />
+                                <div className={`rounded-full ${isShipped ? "bg-blue-500" : "bg-white/10"}`} />
+                                <div className={`rounded-full ${isDelivered ? "bg-green-500" : "bg-white/10"}`} />
+                              </div>
+                            </div>
+
+                            {/* Items List */}
+                            <div className="space-y-1.5 pt-1">
+                              {ord.items?.map((it: any, iIdx: number) => (
+                                <div key={iIdx} className="flex justify-between items-center text-[11px]">
+                                  <span className="text-white truncate">
+                                    {it.name} ({it.color}, {it.size}) ×{it.quantity}
+                                  </span>
+                                  <span className="text-gray-400 font-mono shrink-0 ml-2">
+                                    {formatCurrency(it.price * it.quantity)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Email Live Updates Trigger */}
+                            <div className="pt-2 border-t border-white/5 space-y-1.5">
+                              {emailUpdateSuccess[ord.id] ? (
+                                <div className="text-[10px] text-green-400 font-semibold bg-green-500/10 p-2 rounded-lg border border-green-500/20 flex items-center gap-1.5">
+                                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                                  <span>{emailUpdateSuccess[ord.id]}</span>
+                                </div>
+                              ) : (
+                                <div className="flex gap-1.5">
+                                  <input
+                                    type="email"
+                                    placeholder="Enter email for live updates"
+                                    defaultValue={ord.shippingEmail || userEmail || ""}
+                                    onChange={(e) =>
+                                      setOrderEmailInput((prev) => ({
+                                        ...prev,
+                                        [ord.id]: e.target.value,
+                                      }))
+                                    }
+                                    className="flex-1 rounded-lg bg-black/40 border border-white/10 px-2.5 py-1 text-[10px] text-white focus:border-[#25D366] outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSendEmailUpdate(ord.id)}
+                                    disabled={emailUpdateSubmitting[ord.id]}
+                                    className="rounded-lg bg-white/10 hover:bg-[#25D366] hover:text-gray-950 text-white px-2.5 py-1 text-[10px] font-bold transition flex items-center gap-1 shrink-0"
+                                  >
+                                    <Mail className="h-3 w-3" />
+                                    {emailUpdateSubmitting[ord.id] ? "Linking..." : "Email Updates"}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
 
                 {/* Switch Account or Add PIN */}
                 <div className="pt-2 flex justify-between items-center text-xs">
@@ -950,14 +1172,14 @@ function CatalogContent() {
                       setLoginError("");
                       setSignupError("");
                     }}
-                    className="text-gray-400 hover:text-white underline"
+                    className="text-gray-400 hover:text-white underline text-[11px]"
                   >
                     Switch Account / Sign In
                   </button>
                   <button
                     type="button"
                     onClick={() => setAuthModalOpen(false)}
-                    className="rounded-lg bg-[#25D366] text-gray-950 font-bold px-4 py-2"
+                    className="rounded-lg bg-[#25D366] text-gray-950 font-bold px-4 py-2 text-xs"
                   >
                     Done
                   </button>

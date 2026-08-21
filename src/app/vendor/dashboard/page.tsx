@@ -849,14 +849,22 @@ export default function VendorDashboard() {
                           </span>
                           <span
                             className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase border ${
-                              order.status === "processing"
-                                ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/25"
-                                : order.status === "shipped"
-                                  ? "bg-blue-500/10 text-blue-500 border-blue-500/25"
-                                  : "bg-green-500/10 text-green-500 border-green-500/25"
+                              order.status === "paid"
+                                ? "bg-amber-500/10 text-amber-400 border-amber-500/25"
+                                : order.status === "packaging" || order.status === "processing"
+                                  ? "bg-orange-500/10 text-orange-400 border-orange-500/25"
+                                  : order.status === "shipped"
+                                    ? "bg-blue-500/10 text-blue-400 border-blue-500/25"
+                                    : "bg-green-500/10 text-green-400 border-green-500/25"
                             }`}
                           >
-                            {order.status === "processing" ? "Pending Package" : order.status}
+                            {order.status === "paid"
+                              ? "Paid • Pending Package"
+                              : order.status === "packaging" || order.status === "processing"
+                                ? "Packaging Items"
+                                : order.status === "shipped"
+                                  ? "Shipped"
+                                  : "Delivered"}
                           </span>
                         </div>
                         <p className="text-[10px] text-gray-500 font-medium mt-1">
@@ -918,22 +926,37 @@ export default function VendorDashboard() {
                     )}
 
                     {/* Action buttons */}
-                    {order.status === "processing" && (
+                    {order.status === "paid" && (
+                      <button
+                        onClick={() => updateOrderStatus(order.id, "packaging")}
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 py-2.5 font-bold text-white text-xs transition shadow shadow-orange-500/25 active:scale-95"
+                      >
+                        <Clock className="h-4 w-4" /> 📦 Order Received & Packaging (Notifies Buyer)
+                      </button>
+                    )}
+
+                    {(order.status === "packaging" || order.status === "processing") && (
                       <button
                         onClick={() => updateOrderStatus(order.id, "shipped")}
-                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-sleek-500 py-2.5 font-bold text-white text-xs hover:bg-sleek-600 transition shadow shadow-sleek-500/25 active:scale-95"
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-sleek-500 hover:bg-sleek-600 py-2.5 font-bold text-white text-xs transition shadow shadow-sleek-500/25 active:scale-95"
                       >
-                        <Truck className="h-4 w-4" /> Mark as Shipped (Notifies Buyer)
+                        <Truck className="h-4 w-4" /> 🚚 Mark as Shipped (Notifies Buyer)
                       </button>
                     )}
 
                     {order.status === "shipped" && (
                       <button
                         onClick={() => updateOrderStatus(order.id, "delivered")}
-                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-green-600 py-2.5 font-bold text-white text-xs hover:bg-green-700 transition active:scale-95"
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-green-600 hover:bg-green-700 py-2.5 font-bold text-white text-xs transition shadow shadow-green-600/25 active:scale-95"
                       >
-                        <CheckCircle className="h-4 w-4" /> Mark as Delivered (Notifies Buyer)
+                        <CheckCircle className="h-4 w-4" /> ✅ Mark as Delivered
                       </button>
+                    )}
+
+                    {order.status === "delivered" && (
+                      <div className="w-full py-2.5 rounded-xl bg-green-500/10 border border-green-500/20 text-center text-xs font-bold text-green-400 flex items-center justify-center gap-1.5">
+                        <CheckCircle className="h-4 w-4" /> Delivered & Completed
+                      </div>
                     )}
                   </div>
                 ))

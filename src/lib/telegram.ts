@@ -55,3 +55,47 @@ export function verifyTelegramInitData(
 export function telegramUserPhone(tgId: number | string): string {
   return `tg:${tgId}`;
 }
+
+/**
+ * Sends a message directly to a Telegram user's chat.
+ */
+export async function sendTelegramMessage(
+  chatId: string | number,
+  text: string,
+  replyMarkup?: any
+): Promise<boolean> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) {
+    console.warn("[Telegram] Cannot send message: TELEGRAM_BOT_TOKEN not configured");
+    return false;
+  }
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: "Markdown",
+        ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+      }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      // Fallback without Markdown if parsing fails
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text,
+          ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+        }),
+      });
+    }
+    return true;
+  } catch (err) {
+    console.error("[Telegram] sendTelegramMessage error:", err);
+    return false;
+  }
+}

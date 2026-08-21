@@ -105,17 +105,249 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Handle Callback Queries (e.g. "Track Order" button clicks)
+  if (update?.callback_query) {
+    const cb = update.callback_query;
+    const data = cb.data || "";
+    if (data.startsWith("track_")) {
+      const orderId = data.replace("track_", "");
+      const order = await prisma.order.findFirst({
+        where: { OR: [{ id: orderId }, { trackingNumber: orderId }, { paymentRef: orderId }] },
+        include: { items: true, vendor: true, user: true },
+      });
+
+      if (order) {
+        const statusEmoji = order.status === "delivered" ? "✅" : order.status === "shipped" ? "🚚" : order.status === "packaging" || order.status === "processing" ? "📦" : "🟡";
+        const itemsList = order.items
+          .map((i) => `• *${i.name}* (${i.color}, Size ${i.size}) x${i.quantity}`)
+          .join("\n");
+        const vendorName = order.vendor?.businessName ? `\n🏪 *Vendor:* ${order.vendor.businessName}` : "";
+
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: cb.message?.chat?.id || cb.from.id,
+            text: `${statusEmoji} *LIVE ORDER TRACKING*
+
+📦 *Tracking ID:* \`${order.trackingNumber}\`
+🧾 *Payment Ref:* \`${order.paymentRef || "N/A"}\`${vendorName}
+📊 *Status:* *${order.status.toUpperCase()}*
+💰 *Total:* *₦${order.totalAmount.toLocaleString()}*
+
+🛍️ *Items:*
+${itemsList}
+
+📍 *Destination:*
+${order.shippingName || "Customer"} • ${order.shippingAddress || "Delivery Address"}`,
+            parse_mode: "Markdown",
+          }),
+        }).catch(() => {});
+      }
+    }
+    // Acknowledge callback query
+    await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ callback_query_id: cb.id }),
+    }).catch(() => {});
+    return NextResponse.json({ ok: true });
+  }
+
   const msg = update?.message;
   if (msg?.chat?.id) {
-    // Derive the URL from the request itself so the Mini App button always
-    // matches whichever domain Telegram hit the webhook on (works with
-    // custom domains without redeploying env vars).
     const origin =
       req.headers.get("x-forwarded-proto") && req.headers.get("x-forwarded-host")
         ? `${req.headers.get("x-forwarded-proto")}://${req.headers.get("x-forwarded-host")}`
         : process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
     const catalogUrl = `${origin}/catalog`;
 
+    const text = (msg.text || "").trim();
+    const isTrackCommand =
+      text.toLowerCase().startsWith("/track") ||
+      text.toLowerCase().startsWith("track") ||
+      text.toLowerCase().startsWith("/order") ||
+      text.startsWith("SL-") ||
+      text.startsWith("SLK-");
+
+    if (isTrackCommand) {
+      // Extract the tracking query
+      let query = text.replace(/^\/?(track|order)\s*/i, "").trim();
+      if (!query && (text.startsWith("SL-") || text.startsWith("SLK-"))) {
+        query = text;
+      }
+
+      if (query) {
+        // Search by paymentRef, trackingNumber, or ID
+        const order = await prisma.order.findFirst({
+          where: {
+            OR: [
+              { paymentRef: query },
+              { paymentRef: { equals: query, mode: "insensitive" } },
+              { trackingNumber: query },
+              { trackingNumber: { equals: query, mode: "insensitive" } },
+              { id: query },
+            ],
+          },
+          include: {
+            items: { include: { product: true } },
+            vendor: true,
+            user: true,
+          },
+        });
+
+        if (order) {
+          const statusLabels: Record<string, { label: string; emoji: string; desc: string }> = {
+            paid: {
+              label: "Paid • Order Received",
+              emoji: "🟡",
+              desc: "Payment confirmed. Vendor has been alerted to start packaging your footwear.",
+            },
+            packaging: {
+              label: "Being Packaged",
+              emoji: "📦",
+              desc: "The vendor is carefully inspecting and packaging your items for courier dispatch.",
+            },
+            processing: {
+              label: "Being Packaged",
+              emoji: "📦",
+              desc: "The vendor is carefully inspecting and packaging your items for courier dispatch.",
+            },
+            shipped: {
+              label: "Shipped • In Transit",
+              emoji: "🚚",
+              desc: "Your package has been dispatched with the courier and is on its way to you!",
+            },
+            delivered: {
+              label: "Delivered",
+              emoji: "✅",
+              desc: "Your package has been successfully delivered. Thank you for shopping with Sleek!",
+            },
+            cancelled: {
+              label: "Cancelled",
+              emoji: "❌",
+              desc: "This order has been cancelled.",
+            },
+            awaiting_payment: {
+              label: "Awaiting Payment",
+              emoji: "⏳",
+              desc: "Checkout created but payment has not been completed yet.",
+            },
+          };
+
+          const statusInfo = statusLabels[order.status] || {
+            label: order.status,
+            emoji: "📦",
+            desc: "Order is in progress.",
+          };
+
+          const itemsList = order.items
+            .map((i) => `• *${i.name}* (${i.color}, Size ${i.size}) x${i.quantity}`)
+            .join("\n");
+
+          const vendorName = order.vendor?.businessName ? `\n🏪 *Vendor:* ${order.vendor.businessName}` : "";
+          const paymentRefInfo = order.paymentRef ? `\n🧾 *Payment Ref:* \`${order.paymentRef}\`` : "";
+
+          const trackingMessage = `${statusInfo.emoji} *ORDER STATUS: ${statusInfo.label.toUpperCase()}*
+
+📦 *Tracking Number:* \`${order.trackingNumber}\`${paymentRefInfo}${vendorName}
+💰 *Total Amount:* *₦${order.totalAmount.toLocaleString()}*
+💳 *Payment Status:* ${order.paymentStatus.toUpperCase()}
+
+🛍️ *Items in this order:*
+${itemsList}
+
+ℹ️ *Latest Update:*
+_${statusInfo.desc}_
+
+📍 *Delivery Destination:*
+${order.shippingName || "Customer"}
+${order.shippingAddress ? `${order.shippingAddress}, ${order.shippingCity || ""}` : "Address specified at checkout"}`;
+
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: msg.chat.id,
+              text: trackingMessage,
+              parse_mode: "Markdown",
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: "🛍 Open Store Catalogue",
+                      web_app: { url: catalogUrl },
+                    },
+                  ],
+                ],
+              },
+            }),
+          }).catch(() => {});
+          return NextResponse.json({ ok: true });
+        } else {
+          // Not found
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: msg.chat.id,
+              text: `🔍 *No order found* for reference:\n\`${query}\`\n\nPlease check your payment reference (e.g. \`SL-...\`) or tracking number (e.g. \`SLK-...\`) and try again.\n\nExample:\n\`/track SL-MT3IUKD6-PJ3F-a54c6cf2\``,
+              parse_mode: "Markdown",
+            }),
+          }).catch(() => {});
+          return NextResponse.json({ ok: true });
+        }
+      } else {
+        // No query provided - list recent orders for this Telegram user
+        const phone = `tg:${msg.chat.id}`;
+        const userOrders = await prisma.order.findMany({
+          where: { user: { phone } },
+          orderBy: { createdAt: "desc" },
+          take: 3,
+        });
+
+        if (userOrders.length > 0) {
+          const ordersSummary = userOrders
+            .map((o, idx) => {
+              const statusEmoji = o.status === "delivered" ? "✅" : o.status === "shipped" ? "🚚" : o.status === "packaging" || o.status === "processing" ? "📦" : "🟡";
+              return `${idx + 1}. ${statusEmoji} *${o.trackingNumber}* (₦${o.totalAmount.toLocaleString()})\n   Ref: \`${o.paymentRef || "N/A"}\`\n   Status: *${o.status.toUpperCase()}*`;
+            })
+            .join("\n\n");
+
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: msg.chat.id,
+              text: `📦 *Your Recent Orders:*\n\n${ordersSummary}\n\nTo track any order, reply with:\n\`/track <payment_ref_or_order_id>\``,
+              parse_mode: "Markdown",
+              reply_markup: {
+                inline_keyboard: [
+                  userOrders.map((o) => ({
+                    text: `Track ${o.trackingNumber}`,
+                    callback_data: `track_${o.id}`,
+                  })),
+                ],
+              },
+            }),
+          }).catch(() => {});
+          return NextResponse.json({ ok: true });
+        } else {
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: msg.chat.id,
+              text: `📦 *Track Your Order*\n\nPlease provide your order tracking number or payment reference.\n\nExample:\n\`/track SL-MT3IUKD6-PJ3F-a54c6cf2\``,
+              parse_mode: "Markdown",
+            }),
+          }).catch(() => {});
+          return NextResponse.json({ ok: true });
+        }
+      }
+    }
+
+    // Default Greeting
     await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

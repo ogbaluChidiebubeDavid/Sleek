@@ -1,5 +1,6 @@
 import axios from "axios";
 import crypto from "crypto";
+import { formatCurrency } from "@/lib/utils";
 
 export type PaymentProvider = "opay" | "cryptomus" | "flutterwave" | "paystack";
 
@@ -288,15 +289,63 @@ export async function markOrderPaid(orderId: string, ref: string, method: string
           size: i.size,
         })),
       },
-    });
+    }).catch(() => {});
   }
 
-  // Receipts are best-effort: a messaging failure (e.g. Telegram-only
-  // users have no WhatsApp number) must never break the paid callback.
-  try {
-    await sendPaymentReceipt(order.user.phone, order.id);
-  } catch (err) {
-    console.error("[markOrderPaid] receipt delivery failed:", err);
+  // Telegram User Direct Notification
+  if (order.user?.phone && order.user.phone.startsWith("tg:")) {
+    try {
+      const { sendTelegramMessage } = await import("@/lib/telegram");
+      const chatId = order.user.phone.replace("tg:", "");
+      const itemsList = order.items
+        .map((i) => `• *${i.name}* (${i.color}, Size ${i.size}) x${i.quantity} — ${formatCurrency(i.price * i.quantity)}`)
+        .join("\n");
+
+      const vendorName = order.vendor?.businessName ? `\n🏪 *Vendor:* ${order.vendor.businessName}` : "";
+      const origin = process.env.NEXT_PUBLIC_APP_URL || "https://seekfeet.xyz";
+      const catalogUrl = `${origin}/catalog`;
+
+      const tgMessage = `🎉 *Payment Confirmed!*
+
+Thank you for your order! We've received your payment and notified your vendor to start packaging your items.
+
+🧾 *Payment Reference:* \`${order.paymentRef || ref}\`
+📦 *Tracking ID:* \`${order.trackingNumber}\`${vendorName}
+💰 *Total Amount Paid:* *${formatCurrency(order.totalAmount)}*
+💳 *Payment Method:* ${method.toUpperCase()}
+
+🛍️ *Items Ordered:*
+${itemsList}
+
+📍 *Delivery Info:*
+${order.shippingName || "Customer"}
+${order.shippingAddress ? `${order.shippingAddress}, ${order.shippingCity || ""}` : "Address recorded at checkout"}
+
+🚚 *Live Tracking:*
+You can track your order status anytime by sending:
+\`/track ${order.paymentRef || order.trackingNumber}\``;
+
+      await sendTelegramMessage(chatId, tgMessage, {
+        inline_keyboard: [
+          [
+            {
+              text: "🛍 Open Store Catalogue",
+              web_app: { url: catalogUrl },
+            },
+          ],
+        ],
+      });
+    } catch (err) {
+      console.error("[markOrderPaid] Telegram receipt delivery error:", err);
+    }
+  } else {
+    // WhatsApp User Receipt
+    try {
+      await sendPaymentReceipt(order.user.phone, order.id);
+    } catch (err) {
+      console.error("[markOrderPaid] WhatsApp receipt delivery failed:", err);
+    }
   }
+
   return order;
 }

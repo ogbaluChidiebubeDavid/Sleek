@@ -47,21 +47,33 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Send notifications to the user on real WhatsApp if status changes to Shipped/Delivered
-    const userPhone = order.user.phone;
+    const userPhone = order.user?.phone;
     let messageText = "";
-    if (status === "shipped") {
-      messageText = `🚚 *Order Shipped!*\n\nYour Sleek footwear order *${order.trackingNumber}* has been packaged by the vendor and handed to the courier.\n\nExpected delivery: Within 3 working days.\n\nTrack progress anytime by replying *track ${order.trackingNumber}*`;
+    if (status === "packaging" || status === "processing") {
+      messageText = `📦 *Order Update — Being Packaged*\n\nYour order *${order.trackingNumber}* has been confirmed and is now being carefully packaged by the vendor for courier dispatch.`;
+    } else if (status === "shipped") {
+      messageText = `🚚 *Order Shipped!*\n\nYour Sleek footwear order *${order.trackingNumber}* has been packaged and handed to the courier.\n\nExpected delivery: Within 3 working days.\n\nTrack progress anytime by sending:\n/track ${order.paymentRef || order.trackingNumber}`;
     } else if (status === "delivered") {
-      messageText = `🎉 *Order Delivered!*\n\nYour Sleek footwear order *${order.trackingNumber}* has been successfully delivered. Thank you for shopping with Sleek!`;
+      messageText = `🎉 *Order Delivered!*\n\nYour Sleek footwear order *${order.trackingNumber}* has been successfully delivered. Thank you for shopping with Sleek! 👟`;
     }
 
     if (messageText && userPhone) {
-      try {
-        await sendTextMessage(userPhone, messageText);
-        console.log(`[Vendor Orders] Sent WhatsApp notification to ${userPhone}: ${status}`);
-      } catch (err) {
-        console.error("[Vendor Orders] Failed to send WhatsApp notification:", err);
+      if (userPhone.startsWith("tg:")) {
+        try {
+          const { sendTelegramMessage } = await import("@/lib/telegram");
+          const chatId = userPhone.replace("tg:", "");
+          await sendTelegramMessage(chatId, messageText);
+          console.log(`[Vendor Orders] Sent Telegram notification to ${chatId}: ${status}`);
+        } catch (err) {
+          console.error("[Vendor Orders] Failed to send Telegram notification:", err);
+        }
+      } else {
+        try {
+          await sendTextMessage(userPhone, messageText);
+          console.log(`[Vendor Orders] Sent WhatsApp notification to ${userPhone}: ${status}`);
+        } catch (err) {
+          console.error("[Vendor Orders] Failed to send WhatsApp notification:", err);
+        }
       }
     }
 
