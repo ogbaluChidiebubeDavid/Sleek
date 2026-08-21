@@ -471,7 +471,7 @@ export default function VendorDashboard() {
               </div>
             </div>
             <span className="text-[10px] text-gray-500 block mt-2">
-              95% Vendor Payout • 5% Platform Fee
+              Direct Bank Settlement • 0.5% Platform Fee
             </span>
           </div>
 

@@ -45,9 +45,10 @@ export async function initPaystack(
     };
   }
 
-  // Calculate 5% platform commission (in kobo)
+  // Calculate platform commission (in kobo) - default 0.5%
+  const platformCommissionPercent = Number(process.env.PLATFORM_COMMISSION_PERCENTAGE || "0.5");
   const amountKobo = Math.round(amount * 100);
-  const platformFeeKobo = Math.round(amountKobo * 0.05);
+  const platformFeeKobo = Math.round(amountKobo * (platformCommissionPercent / 100));
 
   const payload: Record<string, any> = {
     email: email || "customer@sleek.shop",

@@ -93,6 +93,13 @@ function CatalogContent() {
   const [userEmail, setUserEmail] = useState("");
   const [copiedWallet, setCopiedWallet] = useState(false);
 
+  // Delivery details states
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryCity, setDeliveryCity] = useState("");
+  const [deliveryPhone, setDeliveryPhone] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSaveSuccess, setProfileSaveSuccess] = useState("");
+
   // Purchase history states
   const [userOrders, setUserOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
@@ -604,6 +611,71 @@ function CatalogContent() {
     }
   };
 
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    setProfileSaveSuccess("");
+    try {
+      const tok = await ensureToken();
+      const res = await fetch("/api/user/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: tok || undefined,
+          phone: rawPhone || undefined,
+          name: userName.trim(),
+          email: userEmail.trim(),
+          deliveryAddress: deliveryAddress.trim(),
+          deliveryCity: deliveryCity.trim(),
+          deliveryPhone: deliveryPhone.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setProfileSaveSuccess("Delivery & contact info saved!");
+        try {
+          localStorage.setItem(
+            "sleek_delivery_info",
+            JSON.stringify({
+              name: userName.trim(),
+              email: userEmail.trim(),
+              address: deliveryAddress.trim(),
+              city: deliveryCity.trim(),
+              phone: deliveryPhone.trim(),
+            })
+          );
+        } catch (e) {}
+        setTimeout(() => setProfileSaveSuccess(""), 3500);
+      } else {
+        alert(data.error || "Failed to save details.");
+      }
+    } catch (e) {
+      alert("Failed to save delivery details. Please try again.");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  useEffect(() => {
+    try {
+      const savedInfo = localStorage.getItem("sleek_delivery_info");
+      if (savedInfo) {
+        const parsed = JSON.parse(savedInfo);
+        if (parsed.address) setDeliveryAddress(parsed.address);
+        if (parsed.city) setDeliveryCity(parsed.city);
+        if (parsed.phone) setDeliveryPhone(parsed.phone);
+        if (parsed.name) {
+          setUserName((prev) => prev || parsed.name);
+          setName((prev) => prev || parsed.name);
+        }
+        if (parsed.email) {
+          setUserEmail((prev) => prev || parsed.email);
+          setEmail((prev) => prev || parsed.email);
+        }
+      }
+    } catch (e) {}
+  }, []);
+
   const cartTotal = cart.reduce((s, i) => {
     const key = `${i.product.id}-${i.color}-${i.size}`;
     if (selectedCartKeys.has(key)) {
@@ -997,48 +1069,133 @@ function CatalogContent() {
                 </div>
 
                 {profileSubTab === "wallet" ? (
-                  /* Crypto Wallet Section */
-                  <div className="bg-[#2a3942] rounded-xl p-3.5 border border-white/5 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-400 uppercase font-bold flex items-center gap-1.5">
-                        <Wallet className="h-3.5 w-3.5 text-[#25D366]" /> Connected Web3 Wallet
-                      </span>
-                      <span className="text-[10px] text-green-400 font-semibold bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
-                        Base Network
-                      </span>
+                  <div className="space-y-4">
+                    {/* Crypto Wallet Section */}
+                    <div className="bg-[#2a3942] rounded-xl p-3.5 border border-white/5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-400 uppercase font-bold flex items-center gap-1.5">
+                          <Wallet className="h-3.5 w-3.5 text-[#25D366]" /> Connected Web3 Wallet
+                        </span>
+                        <span className="text-[10px] text-green-400 font-semibold bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
+                          Base Network
+                        </span>
+                      </div>
+
+                      {userWallet ? (
+                        <div>
+                          <p className="text-xs font-mono text-white break-all bg-black/30 p-2.5 rounded-lg border border-white/5 select-all">
+                            {userWallet}
+                          </p>
+                          <div className="flex justify-between items-center mt-2.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(userWallet);
+                                setCopiedWallet(true);
+                                setTimeout(() => setCopiedWallet(false), 2000);
+                              }}
+                              className="text-xs text-[#25D366] hover:text-[#20ba56] font-semibold flex items-center gap-1.5"
+                            >
+                              {copiedWallet ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                              {copiedWallet ? "Copied!" : "Copy Address"}
+                            </button>
+                            <a
+                              href={`https://basescan.org/address/${userWallet}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[11px] text-gray-400 hover:text-white flex items-center gap-1"
+                            >
+                              Basescan <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400">Wallet will be provisioned automatically upon checkout.</p>
+                      )}
                     </div>
 
-                    {userWallet ? (
-                      <div>
-                        <p className="text-xs font-mono text-white break-all bg-black/30 p-2.5 rounded-lg border border-white/5 select-all">
-                          {userWallet}
-                        </p>
-                        <div className="flex justify-between items-center mt-2.5">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(userWallet);
-                              setCopiedWallet(true);
-                              setTimeout(() => setCopiedWallet(false), 2000);
-                            }}
-                            className="text-xs text-[#25D366] hover:text-[#20ba56] font-semibold flex items-center gap-1.5"
-                          >
-                            {copiedWallet ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                            {copiedWallet ? "Copied!" : "Copy Address"}
-                          </button>
-                          <a
-                            href={`https://basescan.org/address/${userWallet}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-[11px] text-gray-400 hover:text-white flex items-center gap-1"
-                          >
-                            Basescan <ExternalLink className="h-3 w-3" />
-                          </a>
+                    {/* Delivery & Contact Information Form */}
+                    <form onSubmit={handleSaveProfile} className="bg-[#2a3942] rounded-xl p-3.5 border border-white/5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-400 uppercase font-bold flex items-center gap-1.5">
+                          <Truck className="h-3.5 w-3.5 text-[#25D366]" /> Default Delivery & Contact Details
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 text-xs">
+                        <div>
+                          <label className="block text-[9px] text-gray-400 uppercase font-bold mb-1">Full Name</label>
+                          <input
+                            type="text"
+                            placeholder="Full Name"
+                            value={userName}
+                            onChange={(e) => setUserName(e.target.value)}
+                            className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-1.5 text-xs text-white focus:border-[#25D366] outline-none"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[9px] text-gray-400 uppercase font-bold mb-1">Email</label>
+                            <input
+                              type="email"
+                              placeholder="Email for receipts"
+                              value={userEmail}
+                              onChange={(e) => setUserEmail(e.target.value)}
+                              className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-1.5 text-xs text-white focus:border-[#25D366] outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] text-gray-400 uppercase font-bold mb-1">Delivery Phone</label>
+                            <input
+                              type="tel"
+                              placeholder="0814 123 4567"
+                              value={deliveryPhone}
+                              onChange={(e) => setDeliveryPhone(e.target.value)}
+                              className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-1.5 text-xs text-white focus:border-[#25D366] outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[9px] text-gray-400 uppercase font-bold mb-1">Street Address</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 14 Admiralty Way, Lekki Phase 1"
+                            value={deliveryAddress}
+                            onChange={(e) => setDeliveryAddress(e.target.value)}
+                            className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-1.5 text-xs text-white focus:border-[#25D366] outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[9px] text-gray-400 uppercase font-bold mb-1">City / State</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Lagos, Nigeria"
+                            value={deliveryCity}
+                            onChange={(e) => setDeliveryCity(e.target.value)}
+                            className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-1.5 text-xs text-white focus:border-[#25D366] outline-none"
+                          />
                         </div>
                       </div>
-                    ) : (
-                      <p className="text-xs text-gray-400">Wallet will be provisioned automatically upon checkout.</p>
-                    )}
+
+                      {profileSaveSuccess && (
+                        <div className="text-[10px] text-green-400 font-semibold bg-green-500/10 p-2 rounded-lg border border-green-500/20 flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                          <span>{profileSaveSuccess}</span>
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={isSavingProfile}
+                        className="w-full rounded-lg bg-white/10 hover:bg-[#25D366] hover:text-gray-950 text-white font-bold py-2 text-xs transition flex items-center justify-center gap-1.5 mt-2"
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        {isSavingProfile ? "Saving..." : "Save Delivery Details"}
+                      </button>
+                    </form>
                   </div>
                 ) : (
                   /* Purchase History Section */

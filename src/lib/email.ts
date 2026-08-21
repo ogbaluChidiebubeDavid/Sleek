@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import axios from "axios";
 import { prisma } from "@/lib/db";
 import { formatCurrency } from "@/lib/utils";
 import fs from "fs";
@@ -133,12 +134,33 @@ export async function sendEmailReceipt(orderId: string) {
       </html>
     `;
 
-    // 1. SMTP Dispatcher Check
+    // 1. Dispatch Email via Resend if RESEND_API_KEY is available
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (resendApiKey) {
+      try {
+        await axios.post(
+          "https://api.resend.com/emails",
+          {
+            from: process.env.EMAIL_FROM || "Sleek Footwear <orders@seekfeet.xyz>",
+            to: [emailRecipient],
+            subject: `Order Receipt ${order.trackingNumber} - Sleek Footwear ⚡`,
+            html: htmlContent,
+          },
+          { headers: { Authorization: `Bearer ${resendApiKey}` } }
+        );
+        console.log(`[Email Receipt] Sent via Resend to ${emailRecipient}`);
+        return;
+      } catch (err: any) {
+        console.error("[Email Receipt Resend Error]:", err.response?.data || err.message);
+      }
+    }
+
+    // 2. SMTP Dispatcher Check
     const smtpHost = process.env.SMTP_HOST;
     const smtpPort = process.env.SMTP_PORT;
     const smtpUser = process.env.SMTP_USER;
     const smtpPass = process.env.SMTP_PASSWORD;
-    const smtpFrom = process.env.SMTP_FROM || "no-reply@sleek.ng";
+    const smtpFrom = process.env.SMTP_FROM || process.env.EMAIL_FROM || "no-reply@seekfeet.xyz";
 
     if (smtpHost && smtpPort && smtpUser && smtpPass) {
       const transporter = nodemailer.createTransport({
@@ -158,23 +180,179 @@ export async function sendEmailReceipt(orderId: string) {
         html: htmlContent,
       });
 
-      console.log(`[Email Receipt] Successfully sent to ${emailRecipient} for order ${order.trackingNumber}`);
+      console.log(`[Email Receipt] Successfully sent via SMTP to ${emailRecipient} for order ${order.trackingNumber}`);
     } else {
-      console.warn("[Email Receipt] SMTP not configured. Writing HTML receipt to scratchpad...");
-      
-      // Save HTML to a local scratch file for testing/development
-      const scratchDir = "C:\\Users\\USER\\.gemini\\antigravity-ide\\brain\\0781bf6e-36bb-459e-951c-873adbbdd8e8\\scratch";
-      
-      if (!fs.existsSync(scratchDir)) {
-        fs.mkdirSync(scratchDir, { recursive: true });
-      }
-
-      const scratchPath = path.join(scratchDir, `receipt_${order.trackingNumber}.html`);
-      fs.writeFileSync(scratchPath, htmlContent, "utf8");
-
-      console.log(`[Email Receipt] Wrote receipt to local debug file: ${scratchPath}`);
+      console.log(`[Email Receipt] SMTP / Resend not configured for live delivery to ${emailRecipient}.`);
     }
   } catch (err) {
     console.error("[Email Receipt Error]", err);
+  }
+}
+
+/**
+ * Dispatches an email notification whenever the vendor updates fulfillment status (packaging, shipped, delivered).
+ */
+export async function sendOrderStatusEmail(orderId: string, status: string) {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true, user: true, vendor: true },
+    });
+
+    if (!order) return;
+
+    const emailRecipient = order.shippingEmail || order.user.email;
+    if (!emailRecipient) return;
+
+    const statusTitles: Record<string, string> = {
+      packaging: "📦 Your order is being packaged!",
+      processing: "📦 Your order is being packaged!",
+      shipped: "🚚 Your order has been shipped!",
+      delivered: "🎉 Your order has been delivered!",
+    };
+
+    const statusTitle = statusTitles[status] || `Order Status Update: ${status}`;
+
+    const itemsRows = order.items
+      .map(
+        (item) => `
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #1f2937; color: #f3f4f6;">
+            <strong>${item.name}</strong> (${item.color}, Size ${item.size})
+          </td>
+          <td style="padding: 10px; border-bottom: 1px solid #1f2937; text-align: center; color: #f3f4f6;">
+            ${item.quantity}
+          </td>
+          <td style="padding: 10px; border-bottom: 1px solid #1f2937; text-align: right; color: #f3f4f6;">
+            ${formatCurrency(item.price * item.quantity)}
+          </td>
+        </tr>
+      `
+      )
+      .join("");
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head><meta charset="utf-8"><title>${statusTitle}</title></head>
+        <body style="background-color: #030712; color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #090d16; border: 1px solid #1f2937; border-radius: 20px; padding: 32px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+              <h1 style="color: #00c980; font-size: 24px; margin: 0;">Sleek Footwear ⚡</h1>
+              <p style="color: #9ca3af; font-size: 12px; margin-top: 6px; font-family: monospace;">Tracking ID: ${order.trackingNumber}</p>
+            </div>
+
+            <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 24px;">
+              <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 8px 0;">${statusTitle}</h2>
+              <p style="color: #9ca3af; font-size: 14px; margin: 0;">
+                ${
+                  status === "shipped"
+                    ? "Your package has been dispatched with the courier and is on its way to you (expected within 3 working days)."
+                    : status === "delivered"
+                    ? "Your order has arrived! We hope you love your new footwear."
+                    : "The vendor has received your payment and is currently packaging your items for courier dispatch."
+                }
+              </p>
+            </div>
+
+            ${
+              order.vendor
+                ? `
+            <div style="margin-bottom: 24px; font-size: 13px; color: #9ca3af;">
+              <p style="margin: 2px 0;"><strong>Vendor:</strong> ${order.vendor.businessName}</p>
+              ${order.paymentRef ? `<p style="margin: 2px 0; font-family: monospace;"><strong>Payment Ref:</strong> ${order.paymentRef}</p>` : ""}
+            </div>
+            `
+                : ""
+            }
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px;">
+              <thead>
+                <tr style="background-color: #111827;">
+                  <th style="padding: 10px; text-align: left; color: #9ca3af;">Product</th>
+                  <th style="padding: 10px; text-align: center; color: #9ca3af;">Qty</th>
+                  <th style="padding: 10px; text-align: right; color: #9ca3af;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsRows}
+              </tbody>
+            </table>
+
+            <div style="text-align: center; border-top: 1px solid #1f2937; padding-top: 20px;">
+              <p style="color: #9ca3af; font-size: 12px;">Track anytime in Telegram with: <code style="color: #00c980;">/track ${order.paymentRef || order.trackingNumber}</code></p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // 1. Resend
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (resendApiKey) {
+      try {
+        await axios.post(
+          "https://api.resend.com/emails",
+          {
+            from: process.env.EMAIL_FROM || "Sleek Footwear <orders@seekfeet.xyz>",
+            to: [emailRecipient],
+            subject: `${statusTitle} - ${order.trackingNumber}`,
+            html: htmlContent,
+          },
+          { headers: { Authorization: `Bearer ${resendApiKey}` } }
+        );
+        console.log(`[Email Status] Sent via Resend to ${emailRecipient}`);
+        return;
+      } catch (err: any) {
+        console.error("[Email Status Resend Error]:", err.response?.data || err.message);
+      }
+    }
+
+    // 2. SMTP
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = process.env.SMTP_PORT;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASSWORD;
+    const smtpFrom = process.env.SMTP_FROM || process.env.EMAIL_FROM || "no-reply@seekfeet.xyz";
+
+    if (smtpHost && smtpPort && smtpUser && smtpPass) {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(smtpPort),
+        secure: smtpPort === "465",
+        auth: { user: smtpUser, pass: smtpPass },
+      });
+
+      await transporter.sendMail({
+        from: `"Sleek Footwear" <${smtpFrom}>`,
+        to: emailRecipient,
+        subject: `${statusTitle} - ${order.trackingNumber}`,
+        html: htmlContent,
+      });
+
+      console.log(`[Email Status] Successfully sent via SMTP to ${emailRecipient}`);
+    } else {
+      console.log(`[Email Status] SMTP / Resend not configured. Simulated status email for ${emailRecipient}.`);
+    }
+  } catch (err) {
+    console.error("[sendOrderStatusEmail Error]", err);
+  }
+}
+
+/**
+ * Sends a live tracking summary email on demand when user clicks "Email Updates".
+ */
+export async function sendTrackingSummaryEmail(orderId: string, emailRecipient: string) {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true, vendor: true, user: true },
+    });
+
+    if (!order) return;
+
+    await sendOrderStatusEmail(orderId, order.status);
+  } catch (err) {
+    console.error("[sendTrackingSummaryEmail Error]", err);
   }
 }

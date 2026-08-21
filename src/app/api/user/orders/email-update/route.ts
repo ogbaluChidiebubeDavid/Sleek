@@ -35,9 +35,11 @@ export async function POST(req: NextRequest) {
       }).catch(() => {});
     }
 
-    // If a mail service (Resend, SendGrid, SMTP) is configured, it would dispatch here.
-    // For now we log and confirm email receipt subscription.
-    console.log(`[Email Updates] Subscribed ${email} to live updates for order ${order.trackingNumber}`);
+    // Send immediate tracking summary email
+    const { sendTrackingSummaryEmail } = await import("@/lib/email");
+    await sendTrackingSummaryEmail(order.id, email.toLowerCase().trim()).catch((err) =>
+      console.error("[Email Updates] Failed to send tracking summary email:", err)
+    );
 
     return NextResponse.json({
       success: true,

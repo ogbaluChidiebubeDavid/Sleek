@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import axios from "axios";
 
-// Platform commission percentage taken from Paystack sales (e.g., 5%)
-const PLATFORM_COMMISSION_PERCENTAGE = Number(process.env.PLATFORM_COMMISSION_PERCENTAGE) || 5;
+// Platform commission percentage taken from Paystack sales (default 0.5%)
+const PLATFORM_COMMISSION_PERCENTAGE = Number(process.env.PLATFORM_COMMISSION_PERCENTAGE || "0.5");
 
 export async function POST(req: NextRequest) {
   try {

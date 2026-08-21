@@ -77,6 +77,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Also send email status update if customer has an email attached
+    try {
+      const { sendOrderStatusEmail } = await import("@/lib/email");
+      await sendOrderStatusEmail(order.id, status);
+    } catch (err) {
+      console.error("[Vendor Orders] Failed to send email status update:", err);
+    }
+
     return NextResponse.json({ success: true, order: updatedOrder });
   } catch (error: any) {
     console.error("[Vendor Orders POST API] Error:", error);

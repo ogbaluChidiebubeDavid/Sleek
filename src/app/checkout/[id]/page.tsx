@@ -157,11 +157,17 @@ function CheckoutContent() {
           setKeepIds(new Set(data.items.map((i: any) => i.id)));
         }
         if (data.user) {
-          setShippingName(data.user.shippingName || data.user.name || "");
-          setShippingEmail(data.user.shippingEmail || data.user.email || "");
-          setShippingPhone(data.user.shippingPhone || data.user.phone || "");
-          setShippingAddress(data.user.shippingAddress || "");
-          setShippingCity(data.user.shippingCity || "");
+          let fallbackDelivery: any = null;
+          try {
+            const raw = localStorage.getItem("sleek_delivery_info");
+            if (raw) fallbackDelivery = JSON.parse(raw);
+          } catch (e) {}
+
+          setShippingName(data.user.shippingName || data.user.name || fallbackDelivery?.name || "");
+          setShippingEmail(data.user.shippingEmail || data.user.email || fallbackDelivery?.email || "");
+          setShippingPhone(data.user.shippingPhone || fallbackDelivery?.phone || data.user.phone || "");
+          setShippingAddress(data.user.shippingAddress || fallbackDelivery?.address || "");
+          setShippingCity(data.user.shippingCity || fallbackDelivery?.city || "");
           setShippingCountry(data.user.shippingCountry || "Nigeria");
 
           if (data.user.walletAddress) {
