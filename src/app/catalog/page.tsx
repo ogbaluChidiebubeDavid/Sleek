@@ -10,7 +10,20 @@ import {
   getTelegramWebApp,
   closeTelegramApp,
 } from "@/lib/utils";
-import { ShoppingCart, X, UserPlus, Trash2, User } from "lucide-react";
+import {
+  ShoppingCart,
+  X,
+  UserPlus,
+  Trash2,
+  User,
+  Wallet,
+  Copy,
+  Check,
+  ExternalLink,
+  ShieldCheck,
+  Key,
+  LogOut,
+} from "lucide-react";
 
 type Product = {
   id: string;
@@ -64,16 +77,32 @@ function CatalogContent() {
   const [cart, setCart] = useState<
     { product: Product; color: string; size: string; quantity: number }[]
   >([]);
-  const [signupOpen, setSignupOpen] = useState(false);
+  
+  // User Profile & Auth Modal states
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authTab, setAuthTab] = useState<"profile" | "signin" | "signup">("profile");
+  const [userWallet, setUserWallet] = useState("");
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [copiedWallet, setCopiedWallet] = useState(false);
+  
+  // Sign up fields
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [signupError, setSignupError] = useState("");
+  const [signupSubmitting, setSignupSubmitting] = useState(false);
+
+  // Sign in fields
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loginSubmitting, setLoginSubmitting] = useState(false);
+
   const [selected, setSelected] = useState<Record<string, { color: string; size: string }>>({});
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<{ message: string; show: boolean }>({ message: "", show: false });
   const [selectedCartKeys, setSelectedCartKeys] = useState<Set<string>>(new Set());
-  const [signupError, setSignupError] = useState("");
-  const [signupSubmitting, setSignupSubmitting] = useState(false);
-  const [password, setPassword] = useState("");
   const [accountReady, setAccountReady] = useState(false);
   const [confirmCheckout, setConfirmCheckout] = useState(false);
   const [pendingCheckout, setPendingCheckout] = useState<
@@ -99,6 +128,15 @@ function CatalogContent() {
           if (data.token) {
             setToken(data.token);
             setAccountReady(!!data.hasAccount);
+            if (data.walletAddress) setUserWallet(data.walletAddress);
+            if (data.user?.name) {
+              setUserName(data.user.name);
+              setName(data.user.name);
+            }
+            if (data.user?.email) {
+              setUserEmail(data.user.email);
+              setEmail(data.user.email);
+            }
             return data.token as string;
           }
           console.error("Telegram auth rejected:", data.error);
@@ -338,8 +376,10 @@ function CatalogContent() {
   const requireAccount = (): boolean => {
     if (inTelegram && !accountReady) {
       setSignupError("");
-      setSignupOpen(true);
-      showToast("Please create your account first to continue.");
+      setLoginError("");
+      setAuthTab("signup");
+      setAuthModalOpen(true);
+      showToast("Please sign in or create your account to continue.");
       return false;
     }
     return true;
@@ -398,7 +438,52 @@ function CatalogContent() {
     }
   };
 
-  const signup = async () => {
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!loginEmail.trim() || !loginPassword.trim()) {
+      setLoginError("Please enter your email and password / PIN.");
+      return;
+    }
+    setLoginSubmitting(true);
+    setLoginError("");
+    const tok = await ensureToken();
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: loginEmail.trim(),
+          password: loginPassword.trim(),
+          token: tok || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setLoginError(data.error || "Login failed");
+        return;
+      }
+      if (data.token) setToken(data.token);
+      setAccountReady(true);
+      if (data.walletAddress) setUserWallet(data.walletAddress);
+      if (data.user?.name) {
+        setUserName(data.user.name);
+        setName(data.user.name);
+      }
+      if (data.user?.email) {
+        setUserEmail(data.user.email);
+        setEmail(data.user.email);
+      }
+      setAuthTab("profile");
+      showToast(`Welcome back, ${data.user?.name || "Shopper"}! 👋`);
+    } catch (err: any) {
+      setLoginError("Sign in failed. Please check connection.");
+    } finally {
+      setLoginSubmitting(false);
+    }
+  };
+
+  const handleSignup = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const tok = await ensureToken();
     if (!tok && !rawPhone) return;
     if (!name.trim()) {
@@ -410,7 +495,7 @@ function CatalogContent() {
       return;
     }
     if (password.trim().length < 4) {
-      setSignupError("Password must be at least 4 characters.");
+      setSignupError("Password PIN must be at least 4 characters.");
       return;
     }
     setSignupSubmitting(true);
@@ -426,10 +511,16 @@ function CatalogContent() {
           password: password.trim(),
         }),
       });
-      if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
+      if (!res.ok) {
+        setSignupError(data.error || "Signup failed");
+        return;
+      }
       setAccountReady(true);
-      setSignupOpen(false);
+      if (data.walletAddress) setUserWallet(data.walletAddress);
+      if (data.user?.name) setUserName(data.user.name);
+      if (data.user?.email) setUserEmail(data.user.email);
+      setAuthTab("profile");
       showToast(
         data.walletAddress
           ? `Account ready! Your crypto wallet: ${data.walletAddress.slice(0, 8)}...${data.walletAddress.slice(-6)}`
@@ -467,23 +558,25 @@ function CatalogContent() {
           <button
             type="button"
             onClick={() => {
+              if (accountReady || userWallet) {
+                setAuthTab("profile");
+              } else {
+                setAuthTab("signin");
+              }
+              setLoginError("");
               setSignupError("");
-              setSignupOpen(true);
+              setAuthModalOpen(true);
             }}
             className={`relative rounded-lg p-2 transition-all ${
-              accountReady
-                ? "bg-[#25D366]/20 hover:bg-[#25D366]/30"
-                : "bg-white/10 hover:bg-white/20"
+              accountReady || userWallet
+                ? "bg-[#25D366]/20 hover:bg-[#25D366]/30 text-[#25D366]"
+                : "bg-white/10 hover:bg-white/20 text-white"
             }`}
-            aria-label={accountReady ? "Account" : "Sign up"}
-            title={accountReady ? "You're signed in" : "Sign up"}
+            aria-label={accountReady || userWallet ? "My Account & Wallet" : "Sign in"}
+            title={accountReady || userWallet ? "My Account & Wallet" : "Sign in / Sign up"}
           >
-            {accountReady ? (
-              <User className="h-5 w-5 text-[#25D366]" />
-            ) : (
-              <UserPlus className="h-5 w-5" />
-            )}
-            {accountReady && (
+            <User className="h-5 w-5" />
+            {(accountReady || userWallet) && (
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#25D366]" />
             )}
           </button>
@@ -780,51 +873,218 @@ function CatalogContent() {
         </div>
       )}
 
-      {signupOpen && (
+      {authModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#1f2c34] p-6">
-            <h2 className="text-lg font-semibold mb-4">Join Sleek</h2>
-            <p className="text-sm text-gray-400 mb-4">
-              Create your account to save your cart, get a crypto wallet, and track orders.
-            </p>
-            <input
-              className="mb-2 w-full rounded-lg bg-[#2a3942] px-3 py-2 text-sm"
-              placeholder="Your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <input
-              className="mb-2 w-full rounded-lg bg-[#2a3942] px-3 py-2 text-sm"
-              placeholder="Email address"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <input
-              className="mb-2 w-full rounded-lg bg-[#2a3942] px-3 py-2 text-sm"
-              placeholder="Password (your checkout PIN)"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            {signupError && (
-              <p className="mb-2 text-xs text-red-400">{signupError}</p>
+          <div className="w-full max-w-sm rounded-2xl bg-[#1f2c34] p-6 text-white border border-white/10 shadow-2xl">
+            {authTab === "profile" ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center pb-3 border-b border-white/10">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-9 w-9 rounded-full bg-[#25D366]/20 border border-[#25D366]/30 flex items-center justify-center text-[#25D366]">
+                      <User className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-white">{userName || "Sleek Customer"}</h3>
+                      <p className="text-[11px] text-gray-400">{userEmail || (inTelegram ? "Telegram Account" : "Active Session")}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAuthModalOpen(false)}
+                    className="text-gray-400 hover:text-white p-1"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Crypto Wallet Section */}
+                <div className="bg-[#2a3942] rounded-xl p-3.5 border border-white/5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-gray-400 uppercase font-bold flex items-center gap-1.5">
+                      <Wallet className="h-3.5 w-3.5 text-[#25D366]" /> Connected Web3 Wallet
+                    </span>
+                    <span className="text-[10px] text-green-400 font-semibold bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
+                      Base Network
+                    </span>
+                  </div>
+
+                  {userWallet ? (
+                    <div>
+                      <p className="text-xs font-mono text-white break-all bg-black/30 p-2.5 rounded-lg border border-white/5 select-all">
+                        {userWallet}
+                      </p>
+                      <div className="flex justify-between items-center mt-2.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(userWallet);
+                            setCopiedWallet(true);
+                            setTimeout(() => setCopiedWallet(false), 2000);
+                          }}
+                          className="text-xs text-[#25D366] hover:text-[#20ba56] font-semibold flex items-center gap-1.5"
+                        >
+                          {copiedWallet ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                          {copiedWallet ? "Copied!" : "Copy Address"}
+                        </button>
+                        <a
+                          href={`https://basescan.org/address/${userWallet}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] text-gray-400 hover:text-white flex items-center gap-1"
+                        >
+                          Basescan <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">Wallet will be provisioned automatically upon checkout.</p>
+                  )}
+                </div>
+
+                {/* Switch Account or Add PIN */}
+                <div className="pt-2 flex justify-between items-center text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthTab("signin");
+                      setLoginError("");
+                      setSignupError("");
+                    }}
+                    className="text-gray-400 hover:text-white underline"
+                  >
+                    Switch Account / Sign In
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuthModalOpen(false)}
+                    className="rounded-lg bg-[#25D366] text-gray-950 font-bold px-4 py-2"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                {/* Switcher Tabs between Sign In and Sign Up */}
+                <div className="flex border-b border-white/10 mb-4 pb-2 justify-between items-center">
+                  <div className="flex gap-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthTab("signin");
+                        setLoginError("");
+                        setSignupError("");
+                      }}
+                      className={`text-sm font-bold pb-1 ${
+                        authTab === "signin"
+                          ? "text-[#25D366] border-b-2 border-[#25D366]"
+                          : "text-gray-400 hover:text-white"
+                      }`}
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthTab("signup");
+                        setLoginError("");
+                        setSignupError("");
+                      }}
+                      className={`text-sm font-bold pb-1 ${
+                        authTab === "signup"
+                          ? "text-[#25D366] border-b-2 border-[#25D366]"
+                          : "text-gray-400 hover:text-white"
+                      }`}
+                    >
+                      Create Account
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAuthModalOpen(false)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {authTab === "signin" ? (
+                  /* SIGN IN FORM */
+                  <form onSubmit={handleLogin} className="space-y-3">
+                    <p className="text-xs text-gray-400 mb-2">
+                      Sign in with your email and checkout PIN to access your orders and wallet.
+                    </p>
+                    <input
+                      type="email"
+                      required
+                      placeholder="Email address"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      className="w-full rounded-xl bg-[#2a3942] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:border-[#25D366] outline-none"
+                    />
+                    <input
+                      type="password"
+                      required
+                      placeholder="Password / Checkout PIN"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      className="w-full rounded-xl bg-[#2a3942] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:border-[#25D366] outline-none"
+                    />
+                    {loginError && (
+                      <p className="text-xs text-red-400">{loginError}</p>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={loginSubmitting}
+                      className="w-full rounded-xl bg-[#25D366] hover:bg-[#20ba56] py-3 text-xs font-bold text-gray-950 transition disabled:opacity-50"
+                    >
+                      {loginSubmitting ? "Signing in..." : "Sign In"}
+                    </button>
+                  </form>
+                ) : (
+                  /* SIGN UP FORM */
+                  <form onSubmit={handleSignup} className="space-y-3">
+                    <p className="text-xs text-gray-400 mb-2">
+                      Create an account to save your cart, get a crypto wallet, and track orders.
+                    </p>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Full Name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full rounded-xl bg-[#2a3942] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:border-[#25D366] outline-none"
+                    />
+                    <input
+                      type="email"
+                      required
+                      placeholder="Email address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-xl bg-[#2a3942] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:border-[#25D366] outline-none"
+                    />
+                    <input
+                      type="password"
+                      required
+                      placeholder="Password (your checkout PIN)"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full rounded-xl bg-[#2a3942] border border-white/10 px-3.5 py-2.5 text-xs text-white focus:border-[#25D366] outline-none"
+                    />
+                    {signupError && (
+                      <p className="text-xs text-red-400">{signupError}</p>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={signupSubmitting}
+                      className="w-full rounded-xl bg-[#25D366] hover:bg-[#20ba56] py-3 text-xs font-bold text-gray-950 transition disabled:opacity-50"
+                    >
+                      {signupSubmitting ? "Creating account..." : "Create Account"}
+                    </button>
+                  </form>
+                )}
+              </div>
             )}
-            <button
-              type="button"
-              onClick={signup}
-              disabled={signupSubmitting}
-              className="w-full rounded-xl bg-brand-500 py-3 font-semibold text-gray-950 disabled:opacity-60"
-            >
-              {signupSubmitting ? "Creating account..." : "Sign up"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setSignupOpen(false)}
-              className="mt-2 w-full text-sm text-gray-400"
-            >
-              Cancel
-            </button>
           </div>
         </div>
       )}

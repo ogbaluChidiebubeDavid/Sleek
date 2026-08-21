@@ -27,14 +27,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "phone or token required" }, { status: 400 });
   }
 
+  const cleanEmail = email ? email.toLowerCase().trim() : null;
+
+  // Check if another user already has this email
+  if (cleanEmail) {
+    const existingByEmail = await prisma.user.findFirst({
+      where: { email: cleanEmail, NOT: { phone } },
+    });
+    if (existingByEmail) {
+      // If password matches, return the existing user with their permanent wallet
+      if (password && existingByEmail.password === password) {
+        return NextResponse.json({
+          user: { id: existingByEmail.id, phone: existingByEmail.phone, name: existingByEmail.name, email: existingByEmail.email },
+          walletAddress: existingByEmail.walletAddress,
+        });
+      }
+      return NextResponse.json(
+        { error: "An account with this email already exists. Please sign in with your PIN." },
+        { status: 400 }
+      );
+    }
+  }
+
   let user = await prisma.user.upsert({
     where: { phone },
-    create: { phone, name, email, password },
-    update: { name, email, ...(password ? { password } : {}) },
+    create: { phone, name, email: cleanEmail, password },
+    update: {
+      name: name || undefined,
+      email: cleanEmail || undefined,
+      ...(password ? { password } : {}),
+    },
   });
 
-  // Provision a crypto wallet at signup so the user can pay with
-  // real crypto at checkout without any extra steps.
+  // Provision a crypto wallet only if user does not already have one
   if (!user.walletAddress) {
     const wallet = createNewWallet();
     user = await prisma.user.update({
@@ -46,5 +71,8 @@ export async function POST(req: NextRequest) {
   const cart = await prisma.cart.findUnique({ where: { userId: user.id } });
   if (!cart) await prisma.cart.create({ data: { userId: user.id } });
 
-  return NextResponse.json({ user: { id: user.id, phone: user.phone, name: user.name }, walletAddress: user.walletAddress });
+  return NextResponse.json({
+    user: { id: user.id, phone: user.phone, name: user.name, email: user.email },
+    walletAddress: user.walletAddress,
+  });
 }
