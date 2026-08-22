@@ -18,15 +18,25 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    const enrichedOrders = orders.map((order) => ({
-      ...order,
-      shippingName: order.shippingName || order.user?.shippingName || order.user?.name || "Customer",
-      shippingEmail: order.shippingEmail || order.user?.shippingEmail || order.user?.email || "N/A",
-      shippingPhone: order.user?.shippingPhone || (order.user?.phone?.startsWith("tg:") ? "Telegram Customer" : order.user?.phone) || "N/A",
-      shippingAddress: order.shippingAddress || order.user?.shippingAddress || "Address provided at checkout",
-      shippingCity: order.shippingCity || order.user?.shippingCity || "Nigeria",
-      shippingCountry: order.shippingCountry || order.user?.shippingCountry || "Nigeria",
-    }));
+    const enrichedOrders = orders.map((order) => {
+      const actualPhone =
+        order.user?.shippingPhone ||
+        (!order.user?.phone?.startsWith("tg:") ? order.user?.phone : null) ||
+        null;
+
+      const actualAddress = order.shippingAddress || order.user?.shippingAddress || null;
+      const actualCity = order.shippingCity || order.user?.shippingCity || null;
+
+      return {
+        ...order,
+        shippingName: order.shippingName || order.user?.shippingName || order.user?.name || "Customer",
+        shippingEmail: order.shippingEmail || order.user?.shippingEmail || order.user?.email || "N/A",
+        shippingPhone: actualPhone || (order.user?.phone?.startsWith("tg:") ? "Telegram Account (No phone entered)" : "N/A"),
+        shippingAddress: actualAddress || "No address entered",
+        shippingCity: actualCity || "Nigeria",
+        shippingCountry: order.shippingCountry || order.user?.shippingCountry || "Nigeria",
+      };
+    });
 
     return NextResponse.json(enrichedOrders);
   } catch (error) {

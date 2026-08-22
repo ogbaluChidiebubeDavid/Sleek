@@ -886,19 +886,51 @@ export default function VendorDashboard() {
                     {/* Customer & Shipping Address */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-400 bg-white/[0.01] p-3.5 rounded-2xl border border-white/5">
                       <div className="space-y-1">
-                        <p className="font-bold text-gray-300 flex items-center gap-1.5">
-                          👤 Customer Contact
+                        <p className="font-bold text-gray-300 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">👤 Customer Contact</span>
+                          {order.shippingPhone && !order.shippingPhone.includes("No phone") && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(order.shippingPhone || "");
+                                alert("Phone copied: " + order.shippingPhone);
+                              }}
+                              className="text-[10px] text-sleek-400 hover:underline"
+                            >
+                              Copy Phone
+                            </button>
+                          )}
                         </p>
-                        <p className="text-white font-semibold">{order.shippingName || "Sleek Shopper"}</p>
-                        <p className="text-sleek-300 font-mono text-[11px]">{order.shippingPhone || "N/A"}</p>
+                        <p className="text-white font-semibold">{order.shippingName || "Customer"}</p>
+                        <p className="text-sleek-300 font-mono text-[11px]">
+                          {order.shippingPhone || "No phone number saved"}
+                        </p>
                         <p className="text-gray-400 text-[11px]">{order.shippingEmail || "No email"}</p>
                       </div>
+
                       <div className="space-y-1">
-                        <p className="font-bold text-gray-300 flex items-center gap-1.5">
-                          📍 Delivery Address
+                        <p className="font-bold text-gray-300 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">📍 Delivery Address</span>
+                          {order.shippingAddress && !order.shippingAddress.includes("No address") && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const fullAddr = `${order.shippingAddress}, ${order.shippingCity || ""}, ${order.shippingCountry || "Nigeria"}`;
+                                navigator.clipboard.writeText(fullAddr);
+                                alert("Address copied: " + fullAddr);
+                              }}
+                              className="text-[10px] text-[#00c980] hover:underline"
+                            >
+                              Copy Address
+                            </button>
+                          )}
                         </p>
-                        <p className="text-white font-medium">{order.shippingAddress || "Provided at checkout"}</p>
-                        <p className="text-gray-400 text-[11px]">{order.shippingCity || "Nigeria"}, {order.shippingCountry || "Nigeria"}</p>
+                        <p className="text-white font-medium">
+                          {order.shippingAddress || "No street address entered by buyer"}
+                        </p>
+                        <p className="text-gray-400 text-[11px]">
+                          {order.shippingCity || "Nigeria"}, {order.shippingCountry || "Nigeria"}
+                        </p>
                         {order.paymentRef && (
                           <p className="text-[10px] text-gray-500 font-mono pt-1">
                             Ref: {order.paymentRef}

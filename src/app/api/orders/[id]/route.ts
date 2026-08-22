@@ -166,25 +166,34 @@ export async function PATCH(
     return NextResponse.json({ success: true, order: updated });
   }
 
-  const shipping = {
+  const orderShippingData = {
+    shippingName: body.shippingName,
+    shippingEmail: body.shippingEmail,
+    shippingAddress: body.shippingAddress,
+    shippingCity: body.shippingCity,
+    shippingCountry: body.shippingCountry || "Nigeria",
+  };
+
+  const userShippingData = {
     shippingName: body.shippingName,
     shippingEmail: body.shippingEmail,
     shippingPhone: body.shippingPhone,
     shippingAddress: body.shippingAddress,
     shippingCity: body.shippingCity,
-    shippingCountry: body.shippingCountry,
+    shippingCountry: body.shippingCountry || "Nigeria",
   };
 
   await prisma.order.update({
     where: { id },
     data: Object.fromEntries(
-      Object.entries(shipping).filter(([, v]) => v != null && v !== "")
+      Object.entries(orderShippingData).filter(([, v]) => v != null && v !== "")
     ),
   });
+
   await prisma.user.update({
     where: { id: order.userId },
     data: Object.fromEntries(
-      Object.entries(shipping).filter(([, v]) => v != null && v !== "")
+      Object.entries(userShippingData).filter(([, v]) => v != null && v !== "")
     ),
   });
 

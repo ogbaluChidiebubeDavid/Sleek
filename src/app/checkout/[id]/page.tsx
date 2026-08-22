@@ -140,6 +140,9 @@ function CheckoutContent() {
   // Forgot-items reminder popup shown before the user pays.
   const [showForgotItems, setShowForgotItems] = useState(false);
 
+  const [isEditingShipping, setIsEditingShipping] = useState(false);
+  const [shippingError, setShippingError] = useState("");
+
   useEffect(() => {
     setInTelegram(!!getTelegramWebApp());
     fetch(`/api/orders/${orderId}`)
@@ -163,12 +166,19 @@ function CheckoutContent() {
             if (raw) fallbackDelivery = JSON.parse(raw);
           } catch (e) {}
 
+          const rawPhoneVal = data.user.shippingPhone || fallbackDelivery?.phone || data.user.phone || "";
+          const cleanPhoneVal = rawPhoneVal.startsWith("tg:") ? (fallbackDelivery?.phone || "") : rawPhoneVal;
+
           setShippingName(data.user.shippingName || data.user.name || fallbackDelivery?.name || "");
           setShippingEmail(data.user.shippingEmail || data.user.email || fallbackDelivery?.email || "");
-          setShippingPhone(data.user.shippingPhone || fallbackDelivery?.phone || data.user.phone || "");
+          setShippingPhone(cleanPhoneVal);
           setShippingAddress(data.user.shippingAddress || fallbackDelivery?.address || "");
-          setShippingCity(data.user.shippingCity || fallbackDelivery?.city || "");
-          setShippingCountry(data.user.shippingCountry || "Nigeria");
+          setShippingCity(data.user.shippingCity || fallbackDelivery?.city || "Lagos");
+          setShippingCountry(data.user.shippingCountry || fallbackDelivery?.country || "Nigeria");
+
+          if (!data.user.shippingAddress && !fallbackDelivery?.address) {
+            setIsEditingShipping(true);
+          }
 
           if (data.user.walletAddress) {
             setWalletAddress(data.user.walletAddress);
@@ -180,11 +190,8 @@ function CheckoutContent() {
             setMethod("paystack");
           }
 
-          // Existing users or Telegram users go straight to payment chooser — PIN
-          // is only requested when they choose to pay with crypto.
-          if (data.user.password || isTgUser) {
-            setStep("payment");
-          }
+          // Move to payment step
+          setStep("payment");
         }
         setLoading(false);
       })
@@ -284,24 +291,51 @@ function CheckoutContent() {
   // Persist shipping details before redirecting to an external/alternative
   // payment method (Paystack, Telegram Stars) — those paths don't pass
   // through crypto-complete where shipping is normally saved.
-  const saveShipping = async () => {
+  const saveShipping = async (): Promise<boolean> => {
+    if (!shippingAddress.trim()) {
+      setShippingError("Please enter your street delivery address.");
+      setIsEditingShipping(true);
+      return false;
+    }
+    const cleanPhone = shippingPhone.trim();
+    if (!cleanPhone || cleanPhone.startsWith("tg:") || cleanPhone.length < 8) {
+      setShippingError("Please enter a valid active phone number (e.g. 0814 123 4567) so courier can deliver.");
+      setIsEditingShipping(true);
+      return false;
+    }
+    setShippingError("");
     try {
       await fetch(`/api/orders/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...(tokenParam ? { token: tokenParam } : { phone }),
-          shippingName,
-          shippingEmail,
-          shippingPhone,
-          shippingAddress,
-          shippingCity,
-          shippingCountry,
+          shippingName: shippingName.trim() || undefined,
+          shippingEmail: shippingEmail.trim() || undefined,
+          shippingPhone: cleanPhone,
+          shippingAddress: shippingAddress.trim(),
+          shippingCity: shippingCity.trim() || "Lagos",
+          shippingCountry: shippingCountry.trim() || "Nigeria",
           password: password || undefined,
         }),
       });
+      try {
+        localStorage.setItem(
+          "sleek_delivery_info",
+          JSON.stringify({
+            name: shippingName.trim(),
+            email: shippingEmail.trim(),
+            address: shippingAddress.trim(),
+            city: shippingCity.trim() || "Lagos",
+            phone: cleanPhone,
+          })
+        );
+      } catch (e) {}
+      setIsEditingShipping(false);
+      return true;
     } catch (err) {
       console.error("Saving shipping details failed:", err);
+      return false;
     }
   };
 
@@ -371,7 +405,11 @@ function CheckoutContent() {
   const payWithPaystack = async () => {
     if (!order) return;
     setAltPaying(true);
-    await saveShipping();
+    const saved = await saveShipping();
+    if (!saved) {
+      setAltPaying(false);
+      return;
+    }
     try {
       const res = await fetch("/api/payments/init", {
         method: "POST",
@@ -411,7 +449,11 @@ function CheckoutContent() {
     const tg = getTelegramWebApp();
     if (!tg || !order) return;
     setAltPaying(true);
-    await saveShipping();
+    const saved = await saveShipping();
+    if (!saved) {
+      setAltPaying(false);
+      return;
+    }
     try {
       const res = await fetch("/api/payments/telegram-stars", {
         method: "POST",
@@ -441,6 +483,12 @@ function CheckoutContent() {
 
   const executePayment = async () => {
     if (!order) return;
+
+    const saved = await saveShipping();
+    if (!saved) {
+      alert("Please provide your delivery street address and contact phone number before continuing.");
+      return;
+    }
 
     // Group the order into per-recipient payouts: every vendor gets the
     // (fee-free) value of their own items; items without a vendor are
@@ -480,42 +528,47 @@ function CheckoutContent() {
           ? (wei * BigInt(PLATFORM_FEE_BPS)) / BigInt(10000)
           : BigInt(0);
 
-      let tx;
+      let tx: ethers.TransactionResponse;
+
       if (CONTRACT_ADDRESS) {
-        // Split-payment router handles the fee split on-chain.
+        // Sepolia: run through the split-payment router contract
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, userWallet);
-        tx = await contract.pay(payouts.keys().next().value, orderId, {
-          value: totalWei,
-        });
+        const [primaryRecipient] = payouts.keys();
+        tx = await contract.pay(primaryRecipient, order.id, { value: totalWei });
       } else {
-        // No router on this network — pay every recipient directly:
-        // each vendor their share minus the 0.5% fee, the platform its
-        // own sales plus the collected fees.
-        let lastTx;
-        let distributed = BigInt(0);
-        for (const [recipient, ngnAmount] of payouts) {
-          if (!ethers.isAddress(recipient)) {
-            throw new Error(`Invalid recipient address: ${recipient}`);
+        // Mainnet direct transfer: pay each recipient their net share,
+        // send platform fees to the platform wallet, and forward the
+        // rest of the user's balance to the primary vendor as a sweep
+        let lastTx: ethers.TransactionResponse | null = null;
+        for (const [recipient, amountNgn] of payouts.entries()) {
+          const isPlatform = !!PLATFORM_WALLET && recipient.toLowerCase() === PLATFORM_WALLET.toLowerCase();
+          const rawWei = ethers.parseEther((amountNgn / ETH_RATE_NGN).toFixed(6));
+          const feeWei = feeWeiOf(rawWei, isPlatform);
+          const vendorWei = rawWei - feeWei;
+
+          if (feeWei > BigInt(0)) {
+            const feeTx = await userWallet.sendTransaction({
+              to: PLATFORM_WALLET,
+              value: feeWei,
+            });
+            await feeTx.wait();
           }
-          const grossWei = ethers.parseEther(
-            (ngnAmount / ETH_RATE_NGN).toFixed(6)
-          );
-          const netWei = grossWei - feeWeiOf(grossWei, recipient === PLATFORM_WALLET);
-          if (netWei <= BigInt(0)) continue;
-          const vendorTx = await userWallet.sendTransaction({
+
+          lastTx = await userWallet.sendTransaction({
             to: recipient,
-            value: netWei,
+            value: vendorWei,
           });
-          await vendorTx.wait();
-          distributed += netWei;
-          lastTx = vendorTx;
+          await lastTx.wait();
         }
-        // Anything lost to wei-level rounding goes to the platform.
-        const dust = totalWei - distributed;
-        if (dust > BigInt(10000) && PLATFORM_WALLET && ethers.isAddress(PLATFORM_WALLET)) {
+
+        // Sweep any dust left in the ephemeral wallet to the primary recipient
+        const dustWei = await provider.getBalance(walletAddress);
+        const gasBuffer = ethers.parseEther("0.0001");
+        if (dustWei > gasBuffer) {
+          const [primaryRecipient] = payouts.keys();
           const dustTx = await userWallet.sendTransaction({
-            to: PLATFORM_WALLET,
-            value: dust,
+            to: primaryRecipient,
+            value: dustWei - gasBuffer,
           });
           await dustTx.wait();
         }
@@ -526,7 +579,7 @@ function CheckoutContent() {
       setTxHash(tx.hash);
       const receipt = await tx.wait();
 
-      if (receipt.status === 0) {
+      if (receipt && receipt.status === 0) {
         throw new Error("On-chain transaction reverted by EVM.");
       }
 
@@ -884,6 +937,120 @@ function CheckoutContent() {
                 Forgot something? Add more items
               </button>
             )}
+
+            {/* DELIVERY DESTINATION & CONTACT CARD */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 backdrop-blur-md space-y-3">
+              <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4 text-[#00c980]" /> Delivery Destination & Contact
+                </span>
+                {!isEditingShipping && shippingAddress.trim() && shippingPhone.trim() && !shippingPhone.startsWith("tg:") && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingShipping(true)}
+                    className="text-xs text-[#00c980] hover:underline font-semibold"
+                  >
+                    ✏️ Edit
+                  </button>
+                )}
+              </div>
+
+              {isEditingShipping || !shippingAddress.trim() || !shippingPhone.trim() || shippingPhone.startsWith("tg:") ? (
+                <div className="space-y-3 pt-1">
+                  {shippingError && (
+                    <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400 font-medium">
+                      ⚠️ {shippingError}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-[11px] text-gray-400 font-medium mb-1">Your Full Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Tony Dave"
+                      value={shippingName}
+                      onChange={(e) => setShippingName(e.target.value)}
+                      className="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-xs text-white focus:border-[#00c980] outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] text-gray-400 font-medium mb-1">Active Phone Number *</label>
+                      <input
+                        type="tel"
+                        placeholder="0814 123 4567"
+                        value={shippingPhone.startsWith("tg:") ? "" : shippingPhone}
+                        onChange={(e) => setShippingPhone(e.target.value)}
+                        className="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-xs text-white focus:border-[#00c980] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-gray-400 font-medium mb-1">Email for Receipt</label>
+                      <input
+                        type="email"
+                        placeholder="email@example.com"
+                        value={shippingEmail}
+                        onChange={(e) => setShippingEmail(e.target.value)}
+                        className="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-xs text-white focus:border-[#00c980] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-gray-400 font-medium mb-1">Delivery Street Address *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Flat 4, 14 Admiralty Way, Lekki Phase 1"
+                      value={shippingAddress}
+                      onChange={(e) => setShippingAddress(e.target.value)}
+                      className="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-xs text-white focus:border-[#00c980] outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] text-gray-400 font-medium mb-1">City / State</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Lagos"
+                        value={shippingCity}
+                        onChange={(e) => setShippingCity(e.target.value)}
+                        className="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-xs text-white focus:border-[#00c980] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-gray-400 font-medium mb-1">Country</label>
+                      <input
+                        type="text"
+                        placeholder="Nigeria"
+                        value={shippingCountry}
+                        onChange={(e) => setShippingCountry(e.target.value)}
+                        className="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2.5 text-xs text-white focus:border-[#00c980] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const ok = await saveShipping();
+                      if (ok) setIsEditingShipping(false);
+                    }}
+                    className="w-full rounded-xl bg-white/10 hover:bg-[#00c980] hover:text-gray-950 py-2.5 text-xs font-bold text-white transition flex items-center justify-center gap-1.5"
+                  >
+                    <Check className="h-4 w-4" /> Save Delivery Details
+                  </button>
+                </div>
+              ) : (
+                <div className="text-xs space-y-1.5 pt-1 text-gray-300">
+                  <p className="font-semibold text-white">{shippingName || "Customer"}</p>
+                  <p className="text-[#00c980] font-mono text-[11px]">📞 {shippingPhone}</p>
+                  <p className="text-gray-400 text-[11px]">📍 {shippingAddress}, {shippingCity}, {shippingCountry}</p>
+                  {shippingEmail && <p className="text-gray-500 text-[10px]">✉️ {shippingEmail}</p>}
+                </div>
+              )}
+            </div>
 
             {/* PAYMENT METHOD CHOOSER */}
             <div className="space-y-3">
