@@ -11,11 +11,24 @@ export async function GET(req: NextRequest) {
 
     const orders = await prisma.order.findMany({
       where: { vendorId },
-      include: { items: { include: { product: true } } },
+      include: {
+        items: { include: { product: true } },
+        user: true,
+      },
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(orders);
+    const enrichedOrders = orders.map((order) => ({
+      ...order,
+      shippingName: order.shippingName || order.user?.shippingName || order.user?.name || "Customer",
+      shippingEmail: order.shippingEmail || order.user?.shippingEmail || order.user?.email || "N/A",
+      shippingPhone: order.user?.shippingPhone || (order.user?.phone?.startsWith("tg:") ? "Telegram Customer" : order.user?.phone) || "N/A",
+      shippingAddress: order.shippingAddress || order.user?.shippingAddress || "Address provided at checkout",
+      shippingCity: order.shippingCity || order.user?.shippingCity || "Nigeria",
+      shippingCountry: order.shippingCountry || order.user?.shippingCountry || "Nigeria",
+    }));
+
+    return NextResponse.json(enrichedOrders);
   } catch (error) {
     console.error("[Vendor Orders GET API] Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

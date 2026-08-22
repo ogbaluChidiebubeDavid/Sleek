@@ -30,6 +30,22 @@ export async function GET(
   });
 
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Auto-verify fallback if order has a Paystack reference but is still awaiting payment
+  if (order.paymentStatus !== "paid" && order.paymentRef && order.paymentMethod === "paystack") {
+    try {
+      const { verifyPaystack, markOrderPaid } = await import("@/lib/payments");
+      const ok = await verifyPaystack(order.paymentRef);
+      if (ok) {
+        await markOrderPaid(order.id, order.paymentRef, "paystack");
+        order.paymentStatus = "paid";
+        order.status = "paid";
+      }
+    } catch (e) {
+      console.error("[Orders GET API] Paystack active verification check failed:", e);
+    }
+  }
+
   return NextResponse.json(order);
 }
 

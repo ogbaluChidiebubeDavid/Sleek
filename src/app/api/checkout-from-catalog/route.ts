@@ -58,6 +58,11 @@ export async function POST(req: NextRequest) {
       trackingNumber: generateTrackingNumber(),
       totalAmount: total,
       status: "awaiting_payment",
+      shippingName: user.shippingName || user.name || undefined,
+      shippingEmail: user.shippingEmail || user.email || undefined,
+      shippingAddress: user.shippingAddress || undefined,
+      shippingCity: user.shippingCity || undefined,
+      shippingCountry: user.shippingCountry || "Nigeria",
       items: {
         create: itemsToCheckout.map((i) => ({
           productId: i.productId,

@@ -24,12 +24,40 @@ export async function POST(req: NextRequest) {
         phone,
         name: name || undefined,
         email: cleanEmail,
+        shippingName: name || undefined,
+        shippingEmail: cleanEmail,
+        shippingPhone: deliveryPhone || phone,
+        shippingAddress: deliveryAddress || undefined,
+        shippingCity: deliveryCity || undefined,
+        shippingCountry: "Nigeria",
       },
       update: {
         name: name || undefined,
         email: cleanEmail,
+        shippingName: name || undefined,
+        shippingEmail: cleanEmail,
+        shippingPhone: deliveryPhone || undefined,
+        shippingAddress: deliveryAddress || undefined,
+        shippingCity: deliveryCity || undefined,
       },
     });
+
+    // Also update any orders for this user that don't have a shipping address set yet
+    if (deliveryAddress || name) {
+      await prisma.order.updateMany({
+        where: {
+          userId: user.id,
+          OR: [{ shippingAddress: null }, { shippingAddress: "" }],
+        },
+        data: {
+          shippingName: name || user.name || undefined,
+          shippingEmail: cleanEmail || user.email || undefined,
+          shippingAddress: deliveryAddress || user.shippingAddress || undefined,
+          shippingCity: deliveryCity || user.shippingCity || undefined,
+          shippingCountry: "Nigeria",
+        },
+      }).catch((err) => console.error("[User Profile API] Order backfill failed:", err));
+    }
 
     return NextResponse.json({
       success: true,
@@ -40,9 +68,9 @@ export async function POST(req: NextRequest) {
         email: user.email,
         phone: user.phone,
         walletAddress: user.walletAddress,
-        deliveryAddress,
-        deliveryCity,
-        deliveryPhone: deliveryPhone || user.phone,
+        deliveryAddress: user.shippingAddress,
+        deliveryCity: user.shippingCity,
+        deliveryPhone: user.shippingPhone || user.phone,
       },
     });
   } catch (error: any) {
