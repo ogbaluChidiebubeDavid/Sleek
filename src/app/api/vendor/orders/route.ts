@@ -55,7 +55,19 @@ export async function POST(req: NextRequest) {
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { user: true, items: true },
+      include: {
+        user: true,
+        vendor: true,
+        items: {
+          include: {
+            product: {
+              include: {
+                vendor: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!order) {
@@ -70,14 +82,23 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const vendor = order.vendor || order.items[0]?.product?.vendor || null;
+    const vendorName = vendor?.businessName ? vendor.businessName : "Sleek Partner Vendor";
+    const vendorPhone = vendor?.phone ? vendor.phone : null;
+    const vendorContactBlock = vendorPhone
+      ? `\n\n🏪 *Vendor:* ${vendorName}\n📞 *Vendor Phone:* \`${vendorPhone}\`\n_(You can contact the vendor directly if you have any questions regarding your package.)_`
+      : vendorName
+      ? `\n\n🏪 *Vendor:* ${vendorName}`
+      : "";
+
     const userPhone = order.user?.phone;
     let messageText = "";
     if (status === "packaging" || status === "processing") {
-      messageText = `📦 *Order Update — Being Packaged*\n\nYour order *${order.trackingNumber}* has been confirmed and is now being carefully packaged by the vendor for courier dispatch.`;
+      messageText = `📦 *Order Update — Being Packaged*\n\nYour order *${order.trackingNumber}* has been confirmed and is now being packaged by *${vendorName}* for courier dispatch.${vendorContactBlock}`;
     } else if (status === "shipped") {
-      messageText = `🚚 *Order Shipped!*\n\nYour Sleek footwear order *${order.trackingNumber}* has been packaged and handed to the courier.\n\nExpected delivery: Within 3 working days.\n\nTrack progress anytime by sending:\n/track ${order.paymentRef || order.trackingNumber}`;
+      messageText = `🚚 *Order Shipped!*\n\nYour Sleek footwear order *${order.trackingNumber}* has been packaged and handed to the courier by *${vendorName}*.${vendorContactBlock}\n\nExpected delivery: Within 3 working days.\n\nTrack progress anytime by sending:\n/track ${order.paymentRef || order.trackingNumber}`;
     } else if (status === "delivered") {
-      messageText = `🎉 *Order Delivered!*\n\nYour Sleek footwear order *${order.trackingNumber}* has been successfully delivered. Thank you for shopping with Sleek! 👟`;
+      messageText = `🎉 *Order Delivered!*\n\nYour Sleek footwear order *${order.trackingNumber}* from *${vendorName}* has been successfully delivered. Thank you for shopping with Sleek! 👟${vendorContactBlock}`;
     }
 
     if (messageText && userPhone) {

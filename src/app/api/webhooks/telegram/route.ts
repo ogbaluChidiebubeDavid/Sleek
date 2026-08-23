@@ -190,7 +190,7 @@ ${order.shippingName || "Customer"} • ${order.shippingAddress || "Delivery Add
             ],
           },
           include: {
-            items: { include: { product: true } },
+            items: { include: { product: { include: { vendor: true } } } },
             vendor: true,
             user: true,
           },
@@ -245,12 +245,14 @@ ${order.shippingName || "Customer"} • ${order.shippingAddress || "Delivery Add
             .map((i) => `• *${i.name}* (${i.color}, Size ${i.size}) x${i.quantity}`)
             .join("\n");
 
-          const vendorName = order.vendor?.businessName ? `\n🏪 *Vendor:* ${order.vendor.businessName}` : "";
+          const vendor = order.vendor || order.items[0]?.product?.vendor || null;
+          const vendorName = vendor?.businessName ? `\n🏪 *Vendor:* ${vendor.businessName}` : "";
+          const vendorPhone = vendor?.phone ? `\n📞 *Vendor Phone:* \`${vendor.phone}\`` : "";
           const paymentRefInfo = order.paymentRef ? `\n🧾 *Payment Ref:* \`${order.paymentRef}\`` : "";
 
           const trackingMessage = `${statusInfo.emoji} *ORDER STATUS: ${statusInfo.label.toUpperCase()}*
 
-📦 *Tracking Number:* \`${order.trackingNumber}\`${paymentRefInfo}${vendorName}
+📦 *Tracking Number:* \`${order.trackingNumber}\`${paymentRefInfo}${vendorName}${vendorPhone}
 💰 *Total Amount:* *₦${order.totalAmount.toLocaleString()}*
 💳 *Payment Status:* ${order.paymentStatus.toUpperCase()}
 

@@ -302,7 +302,9 @@ export async function markOrderPaid(orderId: string, ref: string, method: string
         .map((i) => `• *${i.name}* (${i.color}, Size ${i.size}) x${i.quantity} — ${formatCurrency(i.price * i.quantity)}`)
         .join("\n");
 
-      const vendorName = order.vendor?.businessName ? `\n🏪 *Vendor:* ${order.vendor.businessName}` : "";
+      const vendor = order.vendor || (vendorId ? await prisma.vendor.findUnique({ where: { id: vendorId } }) : null);
+      const vendorNameInfo = vendor?.businessName ? `\n🏪 *Vendor:* ${vendor.businessName}` : "";
+      const vendorPhoneInfo = vendor?.phone ? `\n📞 *Vendor Contact:* \`${vendor.phone}\`` : "";
       const origin = process.env.NEXT_PUBLIC_APP_URL || "https://seekfeet.xyz";
       const catalogUrl = `${origin}/catalog`;
 
@@ -311,7 +313,7 @@ export async function markOrderPaid(orderId: string, ref: string, method: string
 Thank you for your order! We've received your payment and notified your vendor to start packaging your items.
 
 🧾 *Payment Reference:* \`${order.paymentRef || ref}\`
-📦 *Tracking ID:* \`${order.trackingNumber}\`${vendorName}
+📦 *Tracking ID:* \`${order.trackingNumber}\`${vendorNameInfo}${vendorPhoneInfo}
 💰 *Total Amount Paid:* *${formatCurrency(order.totalAmount)}*
 💳 *Payment Method:* ${method.toUpperCase()}
 

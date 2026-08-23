@@ -18,6 +18,10 @@ function SuccessContent() {
     totalAmount: number;
     paymentRef: string | null;
     txHash: string | null;
+    vendor?: {
+      businessName: string;
+      phone?: string;
+    } | null;
   } | null>(null);
 
   useEffect(() => {
@@ -49,6 +53,33 @@ function SuccessContent() {
               <span className="text-[10px] text-gray-500 font-bold uppercase block">Tracking Number</span>
               <p className="text-xl font-mono text-sleek-400 font-bold mt-0.5">{order.trackingNumber}</p>
             </div>
+
+            {order.vendor && (
+              <div className="bg-black/30 border border-white/5 rounded-xl p-3 text-left space-y-1.5">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">
+                  🏪 Fulfilled by Vendor
+                </span>
+                <p className="text-sm font-semibold text-white">{order.vendor.businessName}</p>
+                {order.vendor.phone && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <a
+                      href={`tel:${order.vendor.phone}`}
+                      className="text-xs text-[#00c980] bg-[#00c980]/10 hover:bg-[#00c980]/20 px-2.5 py-1 rounded-lg font-medium inline-flex items-center gap-1 border border-[#00c980]/20"
+                    >
+                      📞 Call ({order.vendor.phone})
+                    </a>
+                    <a
+                      href={`https://wa.me/${order.vendor.phone.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-[#25D366] bg-[#25D366]/10 hover:bg-[#25D366]/20 px-2.5 py-1 rounded-lg font-medium inline-flex items-center gap-1 border border-[#25D366]/20"
+                    >
+                      💬 WhatsApp
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
             
             <p className="text-xs text-gray-500">
               Use this tracking number {inTelegram ? "in our Telegram bot chat to track your order" : "in WhatsApp to query shipping progress anytime"}.

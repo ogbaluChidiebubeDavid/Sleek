@@ -10,7 +10,7 @@ export async function sendEmailReceipt(orderId: string) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        items: true,
+        items: { include: { product: { include: { vendor: true } } } },
         user: true,
         vendor: true,
       },
@@ -46,13 +46,18 @@ export async function sendEmailReceipt(orderId: string) {
       )
       .join("");
 
-    const vendorInfo = order.vendor
+    const vendor = order.vendor || order.items[0]?.product?.vendor || null;
+    const vendorInfo = vendor
       ? `
         <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
-          <h3 style="margin-top: 0; color: #00c980; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Vendor Partner</h3>
-          <p style="margin: 4px 0; color: #e5e7eb;"><strong>${order.vendor.businessName}</strong></p>
-          <p style="margin: 4px 0; color: #9ca3af; font-size: 12px;">Phone: ${order.vendor.phone || "N/A"}</p>
-          <p style="margin: 4px 0; color: #9ca3af; font-size: 12px; font-family: monospace; word-break: break-all;">Settlement Address: ${order.vendor.walletAddress}</p>
+          <h3 style="margin-top: 0; color: #00c980; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">🏪 Vendor Partner</h3>
+          <p style="margin: 4px 0; color: #e5e7eb;"><strong>${vendor.businessName}</strong></p>
+          ${
+            vendor.phone
+              ? `<p style="margin: 4px 0; color: #9ca3af; font-size: 13px;">Phone: <a href="tel:${vendor.phone}" style="color: #00c980; text-decoration: none; font-weight: bold;">${vendor.phone}</a> &nbsp;•&nbsp; <a href="https://wa.me/${vendor.phone.replace(/[^0-9]/g, "")}" style="color: #25D366; text-decoration: none;">💬 WhatsApp</a></p>`
+              : ""
+          }
+          <p style="margin: 4px 0; color: #9ca3af; font-size: 12px; font-family: monospace; word-break: break-all;">Settlement: ${vendor.walletAddress}</p>
         </div>
       `
       : "";
@@ -196,13 +201,19 @@ export async function sendOrderStatusEmail(orderId: string, status: string) {
   try {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: true, user: true, vendor: true },
+      include: {
+        items: { include: { product: { include: { vendor: true } } } },
+        user: true,
+        vendor: true,
+      },
     });
 
     if (!order) return;
 
     const emailRecipient = order.shippingEmail || order.user.email;
     if (!emailRecipient) return;
+
+    const vendor = order.vendor || order.items[0]?.product?.vendor || null;
 
     const statusTitles: Record<string, string> = {
       packaging: "📦 Your order is being packaged!",
@@ -256,11 +267,17 @@ export async function sendOrderStatusEmail(orderId: string, status: string) {
             </div>
 
             ${
-              order.vendor
+              vendor
                 ? `
-            <div style="margin-bottom: 24px; font-size: 13px; color: #9ca3af;">
-              <p style="margin: 2px 0;"><strong>Vendor:</strong> ${order.vendor.businessName}</p>
-              ${order.paymentRef ? `<p style="margin: 2px 0; font-family: monospace;"><strong>Payment Ref:</strong> ${order.paymentRef}</p>` : ""}
+            <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 24px; font-size: 13px; color: #9ca3af;">
+              <p style="margin: 0 0 8px 0; color: #ffffff; font-weight: bold; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em;">🏪 Vendor & Dispatch Contact</p>
+              <p style="margin: 3px 0; color: #e5e7eb;"><strong>Store:</strong> ${vendor.businessName}</p>
+              ${
+                vendor.phone
+                  ? `<p style="margin: 3px 0; color: #e5e7eb;"><strong>Phone:</strong> <a href="tel:${vendor.phone}" style="color: #00c980; text-decoration: none; font-weight: bold;">${vendor.phone}</a> &nbsp;•&nbsp; <a href="https://wa.me/${vendor.phone.replace(/[^0-9]/g, "")}" style="color: #25D366; text-decoration: none;">💬 WhatsApp</a></p>`
+                  : ""
+              }
+              ${order.paymentRef ? `<p style="margin: 3px 0; font-family: monospace; font-size: 11px;"><strong>Payment Ref:</strong> ${order.paymentRef}</p>` : ""}
             </div>
             `
                 : ""

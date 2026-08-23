@@ -1235,9 +1235,29 @@ function CatalogContent() {
                                   </span>
                                 )}
                                 {ord.vendor?.businessName && (
-                                  <span className="text-[10px] text-sleek-300 font-medium block mt-0.5">
-                                    🏪 {ord.vendor.businessName}
-                                  </span>
+                                  <div className="mt-1 space-y-0.5">
+                                    <span className="text-[10px] text-sleek-300 font-medium block">
+                                      🏪 {ord.vendor.businessName}
+                                    </span>
+                                    {ord.vendor.phone && (
+                                      <div className="flex items-center gap-1.5 pt-0.5">
+                                        <a
+                                          href={`tel:${ord.vendor.phone}`}
+                                          className="text-[9px] text-[#00c980] bg-[#00c980]/10 hover:bg-[#00c980]/20 px-2 py-0.5 rounded font-medium inline-flex items-center gap-1 border border-[#00c980]/20"
+                                        >
+                                          📞 Call ({ord.vendor.phone})
+                                        </a>
+                                        <a
+                                          href={`https://wa.me/${ord.vendor.phone.replace(/[^0-9]/g, "")}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-[9px] text-[#25D366] bg-[#25D366]/10 hover:bg-[#25D366]/20 px-2 py-0.5 rounded font-medium inline-flex items-center gap-1 border border-[#25D366]/20"
+                                        >
+                                          💬 WhatsApp
+                                        </a>
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                               <div className="text-right">

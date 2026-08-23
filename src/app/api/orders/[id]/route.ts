@@ -25,6 +25,7 @@ export async function GET(
           },
         },
       },
+      vendor: true,
       user: true,
     },
   });
@@ -46,7 +47,12 @@ export async function GET(
     }
   }
 
-  return NextResponse.json(order);
+  const resolvedVendor = order.vendor || order.items[0]?.product?.vendor || null;
+
+  return NextResponse.json({
+    ...order,
+    vendor: resolvedVendor,
+  });
 }
 
 /**

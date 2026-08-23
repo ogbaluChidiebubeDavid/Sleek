@@ -371,7 +371,11 @@ async function initiateCheckout(phone: string, userId: string) {
 export async function handleTracking(phone: string, trackingNumber: string) {
   const order = await prisma.order.findUnique({
     where: { trackingNumber },
-    include: { items: true, user: true },
+    include: {
+      items: { include: { product: { include: { vendor: true } } } },
+      user: true,
+      vendor: true,
+    },
   });
 
   if (!order) {
@@ -379,11 +383,17 @@ export async function handleTracking(phone: string, trackingNumber: string) {
     return;
   }
 
+  const vendor = order.vendor || order.items[0]?.product?.vendor || null;
+  const vendorInfo = vendor
+    ? `\n*Vendor:* ${vendor.businessName}\n*Vendor Contact:* ${vendor.phone || "N/A"}`
+    : "";
+
   const statusLabels: Record<string, string> = {
     pending: "Order received",
     awaiting_payment: "Awaiting payment",
     paid: "Payment confirmed — preparing shipment",
-    processing: "Being packed at our warehouse",
+    processing: "Being packed for dispatch",
+    packaging: "Being packed by vendor",
     shipped: "On the way to you (Expected delivery in 3 working days)",
     delivered: "Delivered",
     cancelled: "Cancelled",
@@ -403,23 +413,28 @@ export async function handleTracking(phone: string, trackingNumber: string) {
 
   await sendTextMessage(
     phone,
-    `*Order ${order.trackingNumber}*\nStatus: ${statusLabels[order.shipping_status] || order.shipping_status || statusLabels[order.status] || order.status}\nPayment: ${order.paymentStatus}\n\n${itemsList}\n${shippingInfo}${txInfo}\n\nTotal: ${formatCurrency(order.totalAmount)}`
+    `*Order ${order.trackingNumber}*\nStatus: ${statusLabels[order.shipping_status] || order.shipping_status || statusLabels[order.status] || order.status}\nPayment: ${order.paymentStatus}${vendorInfo}\n\n${itemsList}\n${shippingInfo}${txInfo}\n\nTotal: ${formatCurrency(order.totalAmount)}`
   );
 }
 
 export async function sendPaymentReceipt(phone: string, orderId: string) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { items: true, vendor: true },
+    include: {
+      items: { include: { product: { include: { vendor: true } } } },
+      vendor: true,
+    },
   });
   if (!order) return;
+
+  const vendor = order.vendor || order.items[0]?.product?.vendor || null;
 
   const itemsList = order.items
     .map((i) => `• ${i.name} (${i.color}, ${i.size}) — ${formatCurrency(i.price * i.quantity)}`)
     .join("\n");
 
-  const vendorInfo = order.vendor
-    ? `\n*Vendor Summary:*\nName: ${order.vendor.businessName}\nPhone: ${order.vendor.phone || "N/A"}`
+  const vendorInfo = vendor
+    ? `\n*Vendor Details:*\nBusiness: ${vendor.businessName}\nPhone: ${vendor.phone || "N/A"}`
     : "";
 
   const shippingInfo = `*Shipping Address:*\n${order.shippingName}\n${order.shippingAddress}\n${order.shippingCity}, ${order.shippingCountry}`;

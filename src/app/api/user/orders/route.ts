@@ -27,13 +27,29 @@ export async function GET(req: NextRequest) {
     const orders = await prisma.order.findMany({
       where: { userId: user.id },
       include: {
-        items: { include: { product: true } },
+        items: { include: { product: { include: { vendor: true } } } },
         vendor: true,
       },
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ orders });
+    const enrichedOrders = orders.map((order) => {
+      const vendor = order.vendor || order.items[0]?.product?.vendor || null;
+      return {
+        ...order,
+        vendor: vendor
+          ? {
+              id: vendor.id,
+              businessName: vendor.businessName,
+              phone: vendor.phone,
+              email: vendor.email,
+              walletAddress: vendor.walletAddress,
+            }
+          : null,
+      };
+    });
+
+    return NextResponse.json({ orders: enrichedOrders });
   } catch (error: any) {
     console.error("[User Orders API] Error:", error);
     return NextResponse.json(
