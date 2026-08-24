@@ -116,6 +116,31 @@ export default function VendorDashboard() {
     }, 2000);
   };
 
+  const [isInitiatingKyc, setIsInitiatingKyc] = useState(false);
+
+  const handleStartDiditKyc = async () => {
+    if (!vendorId) return;
+    setIsInitiatingKyc(true);
+    try {
+      const res = await fetch("/api/vendor/didit/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vendorId }),
+      });
+      const data = await res.json();
+      if (data.verificationUrl) {
+        window.location.href = data.verificationUrl;
+      } else {
+        alert(data.error || "Could not start Didit session. Please try again.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error initiating Didit KYC.");
+    } finally {
+      setIsInitiatingKyc(false);
+    }
+  };
+
   useEffect(() => {
     // Authenticate using localStorage
     const savedId = localStorage.getItem("sleek_vendor_id");
@@ -125,6 +150,17 @@ export default function VendorDashboard() {
     }
     setVendorId(savedId);
     fetchData(savedId);
+
+    // Auto-check Didit decision if redirected back
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const diditSess = params.get("didit_session");
+      if (diditSess) {
+        fetch(`/api/vendor/didit/decision?sessionId=${diditSess}&vendorId=${savedId}`)
+          .then(() => fetchData(savedId))
+          .catch(console.error);
+      }
+    }
 
     // Fetch Nigerian banks list
     fetch("/api/vendor/banks")
@@ -394,9 +430,20 @@ export default function VendorDashboard() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/[0.02] border border-white/5 p-6 rounded-3xl backdrop-blur-md">
           <div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-sleek-400 to-sleek-200 bg-clip-text text-transparent">
-              {vendorInfo?.businessName || "Your Footwear Shop"}
+              {vendorInfo?.businessName || "Your Store"}
             </h1>
-            <p className="text-sm text-gray-400 mt-1">{vendorInfo?.email}</p>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <p className="text-xs text-gray-400">{vendorInfo?.email}</p>
+              {vendorInfo?.kycStatus === "verified" ? (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#00c980] bg-[#00c980]/10 border border-[#00c980]/30 px-2.5 py-0.5 rounded-full">
+                  <ShieldCheck className="h-3 w-3" /> Didit Verified Merchant
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-0.5 rounded-full">
+                  <AlertCircle className="h-3 w-3" /> Didit KYC Required
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex flex-col items-end gap-1 relative">
             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
@@ -458,6 +505,44 @@ export default function VendorDashboard() {
             )}
           </div>
         </div>
+
+        {/* DIDIT KYC VERIFICATION BANNER */}
+        {vendorInfo && vendorInfo.kycStatus !== "verified" && (
+          <div className="bg-gradient-to-r from-[#00c980]/15 via-[#00c980]/5 to-transparent border border-[#00c980]/30 rounded-3xl p-5 sm:p-6 backdrop-blur-md flex flex-col md:flex-row justify-between items-start md:items-center gap-5">
+            <div className="flex items-center gap-4">
+              <div className="p-3.5 bg-[#00c980]/20 border border-[#00c980]/30 rounded-2xl text-[#00c980] shrink-0">
+                <ShieldCheck className="h-7 w-7" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-white">Didit Identity &amp; Business Verification</h3>
+                  <span className="text-[10px] bg-[#00c980]/20 text-[#00c980] border border-[#00c980]/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    Recommended
+                  </span>
+                </div>
+                <p className="text-xs text-gray-300 mt-1 max-w-xl leading-relaxed">
+                  Verify your merchant identity via Didit in 60 seconds with biometric liveness. Boost customer trust on WhatsApp &amp; Telegram and unlock verified store badges.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleStartDiditKyc}
+              disabled={isInitiatingKyc}
+              className="rounded-2xl bg-[#00c980] hover:bg-[#059669] px-6 py-3 text-xs font-bold text-black shadow-lg shadow-[#00c980]/20 transition active:scale-95 shrink-0 flex items-center gap-2 disabled:opacity-50"
+            >
+              {isInitiatingKyc ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Launching Didit...
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="h-4 w-4" /> Start Didit KYC
+                </>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* STATS TILES CARD GRID */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

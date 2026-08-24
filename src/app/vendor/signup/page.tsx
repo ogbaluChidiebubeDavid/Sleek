@@ -520,8 +520,8 @@ export default function VendorSignup() {
                 <h2 className="text-xl font-bold bg-gradient-to-r from-sleek-400 to-sleek-200 bg-clip-text text-transparent">
                   Onboarding Complete!
                 </h2>
-                <p className="text-xs text-gray-500 mt-1">
-                  Your footwear shop has been registered and verified.
+                <p className="text-xs text-gray-400 mt-1">
+                  Your store has been registered with <span className="text-[#00c980] font-semibold">Didit Verified Identity</span>.
                 </p>
               </div>
 
@@ -570,10 +570,10 @@ export default function VendorSignup() {
 
               <div className="rounded-xl border border-white/5 bg-white/[0.01] p-4 text-[11px] text-gray-400 space-y-2">
                 <p>
-                  <strong>How routing works:</strong> When a user buys a footwear sample you listed, their payment goes straight to your shop wallet address on-chain.
+                  <strong>How payouts work:</strong> On fiat Paystack sales, customer payments settle directly to your Nigerian bank account. On crypto sales, payments go straight to your shop wallet on Base.
                 </p>
                 <p>
-                  <strong>Platform Fee:</strong> A 0.1% platform fee is automatically deducted by the smart contract on-chain and forwarded to the platform wallet.
+                  <strong>Platform Fee:</strong> Transparent 0.5% platform fee with zero monthly subscription charges.
                 </p>
               </div>
 

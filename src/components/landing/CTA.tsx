@@ -15,10 +15,10 @@ export function CTA() {
       >
         <div className="rounded-3xl bg-sleek-500 px-8 py-14 text-white shadow-xl shadow-sleek-500/25">
           <h2 className="font-display text-3xl font-black uppercase sm:text-4xl">
-            Sleek AI: Footwear on WhatsApp
+            Sleek AI: Social Commerce on Autopilot
           </h2>
           <p className="mt-4 text-sleek-100 max-w-xl mx-auto">
-            Browse, cart, checkout, and track — all in one place, all on WhatsApp.
+            Browse any catalog, cart, checkout in 1 tap, and track orders live — all inside WhatsApp &amp; Telegram.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
