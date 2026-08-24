@@ -19,15 +19,15 @@ export function Features() {
 
   const showcases: ShowcaseItem[] = [
     {
-      title: "Shop Footwear Instantly on WhatsApp",
+      title: "Shop Any Product Instantly in Chat",
       description:
-        "With Sleek, browse sneakers, boots, and sandals in seconds through a simple WhatsApp chat — pick size, color, buy or add to cart from a live carousel.",
+        "With Sleek, browse fashion, shoes, gadgets, beauty, and luxury items in seconds through a simple WhatsApp or Telegram chat — select variants, colors, checkout in 1-tap, or add to cart from a live catalog carousel.",
       cta: "Start Shopping",
       image: (
         <div className="relative w-full h-full min-h-[280px] sm:min-h-[380px] bg-gray-100">
           <Image
-            src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&h=600&fit=crop"
-            alt="Shop Footwear"
+            src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop"
+            alt="Multipurpose Social Shopping"
             fill
             className="object-cover"
             unoptimized

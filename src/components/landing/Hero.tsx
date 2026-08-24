@@ -24,7 +24,7 @@ export function Hero() {
               transition={{ duration: 0.5 }}
               className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#00c980] bg-[#00c980]/8 px-3 py-1.5 rounded-full"
             >
-              <span>✦</span> AI-powered footwear commerce
+              <span>✦</span> AI-powered social commerce platform
             </motion.div>
 
             {/* Main Heading */}
@@ -34,8 +34,8 @@ export function Hero() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="font-display text-[2.5rem] font-black uppercase leading-[1.05] tracking-tight text-[#1c1c1c] sm:text-5xl md:text-6xl lg:text-[4.25rem]"
             >
-              Buy Premium <br className="hidden sm:inline" />
-              Footwear <br className="hidden sm:inline" />
+              Buy &amp; Sell <br className="hidden sm:inline" />
+              Anything <br className="hidden sm:inline" />
               <span className="text-[#00c980]">Through WhatsApp AI</span>
             </motion.h1>
 
@@ -46,7 +46,7 @@ export function Hero() {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="max-w-xl text-sm font-medium text-gray-500 sm:text-base leading-relaxed"
             >
-              Discover sneakers, slides, heels, sandals and luxury footwear through conversational AI shopping.
+              Footwear, fashion, gadgets, beauty, and lifestyle products. Discover items through conversational AI, checkout in 1-tap, and automate sales on WhatsApp &amp; Telegram.
             </motion.p>
 
             {/* CTA Buttons */}

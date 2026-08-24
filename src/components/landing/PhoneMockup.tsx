@@ -8,7 +8,7 @@ import { SleekLogo } from "@/components/brand/SleekLogo";
 const carouselItems = [
   {
     name: "Air Jordan 1",
-    subtitle: "High OG",
+    subtitle: "High OG • Shoes",
     price: "₦120,000",
     size: "Size 42",
     colors: ["#dc2626", "#ffffff", "#000000"], // Red, White, Black
@@ -16,22 +16,31 @@ const carouselItems = [
       "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop",
   },
   {
-    name: "Air Nike Air Force 1",
-    subtitle: "Black",
-    price: "₦85,000",
-    size: "Size 41",
-    colors: ["#000000", "#ffffff"], // Black, White
+    name: "Apple Watch Ultra 2",
+    subtitle: "GPS + Cellular • Tech",
+    price: "₦380,000",
+    size: "49mm",
+    colors: ["#000000", "#e5e7eb", "#f97316"], // Black, Silver, Orange
     image:
-      "https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=200&h=200&fit=crop",
+      "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=200&h=200&fit=crop",
   },
   {
-    name: "Yeezy Slide",
-    subtitle: "Sand",
-    price: "₦35,000",
-    size: "Size 43",
-    colors: ["#d2b48c", "#8b7355"], // Sand/Beige shades
+    name: "Oversized Hoodie",
+    subtitle: "Heavyweight • Apparel",
+    price: "₦45,000",
+    size: "Size L",
+    colors: ["#111827", "#6b7280", "#2563eb"], // Black, Grey, Blue
     image:
-      "https://images.unsplash.com/photo-1603487742131-4160ec999306?w=200&h=200&fit=crop",
+      "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=200&h=200&fit=crop",
+  },
+  {
+    name: "Creed Aventus",
+    subtitle: "Eau De Parfum • Beauty",
+    price: "₦185,000",
+    size: "100ml",
+    colors: ["#111827", "#f59e0b"], // Black, Amber
+    image:
+      "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=200&h=200&fit=crop",
   },
 ];
 
@@ -180,7 +189,7 @@ export function PhoneMockup({ variant = "full" }: PhoneMockupProps) {
               transition={{ delay: 0.6 }}
               className="ml-auto max-w-[85%] rounded-lg rounded-tr-none bg-[#d9fdd3] px-3 py-2 text-xs text-[#303030] shadow-xs relative flex flex-col gap-0.5"
             >
-              <p>Hello I want to buy footwear 👟</p>
+              <p>Hey! What trending products are in stock today? 🔥</p>
               <span className="text-[8px] text-[#667781] self-end mt-0.5 flex items-center gap-0.5">
                 9:41 AM <span className="text-[#53bdeb] font-bold">✓✓</span>
               </span>
@@ -193,7 +202,7 @@ export function PhoneMockup({ variant = "full" }: PhoneMockupProps) {
               transition={{ delay: 1 }}
               className="max-w-[90%] rounded-lg rounded-tl-none bg-white px-3 py-2 text-xs text-[#303030] shadow-xs border border-[#e9edef] flex flex-col gap-0.5"
             >
-              <p>Check our catalogue and choose your preferred footwear 🛍️</p>
+              <p>Here are top picks from verified vendor stores across categories 👇</p>
               <span className="text-[8px] text-[#667781] self-end mt-0.5">9:41 AM</span>
             </motion.div>
 

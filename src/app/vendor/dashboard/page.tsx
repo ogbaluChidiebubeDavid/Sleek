@@ -78,10 +78,11 @@ export default function VendorDashboard() {
   // New product form states
   const [showAddForm, setShowAddForm] = useState(false);
   const [newProductName, setNewProductName] = useState("");
+  const [newProductCategory, setNewProductCategory] = useState("footwear");
   const [newProductDesc, setNewProductDesc] = useState("");
   const [newProductPrice, setNewProductPrice] = useState("");
   const [newProductImage, setNewProductImage] = useState("");
-  const [newProductColors, setNewProductColors] = useState("Black, White, Blue");
+  const [newProductColors, setNewProductColors] = useState("Black, White");
   const [newProductSizes, setNewProductSizes] = useState("40, 41, 42, 43, 44");
   const [isAddingProduct, setIsAddingProduct] = useState(false);
 
@@ -240,8 +241,12 @@ export default function VendorDashboard() {
     }
     setIsAddingProduct(true);
     try {
-      const colorArray = newProductColors.split(",").map((c) => c.trim());
-      const sizeArray = newProductSizes.split(",").map((s) => s.trim());
+      const colorArray = newProductColors.trim()
+        ? newProductColors.split(",").map((c) => c.trim()).filter(Boolean)
+        : ["Default"];
+      const sizeArray = newProductSizes.trim()
+        ? newProductSizes.split(",").map((s) => s.trim()).filter(Boolean)
+        : ["Standard"];
 
       const res = await fetch("/api/vendor/products", {
         method: "POST",
@@ -252,6 +257,7 @@ export default function VendorDashboard() {
           description: newProductDesc,
           price: parseFloat(newProductPrice),
           imageUrl: newProductImage,
+          category: newProductCategory,
           colors: colorArray,
           sizes: sizeArray,
         }),
@@ -265,6 +271,7 @@ export default function VendorDashboard() {
         setNewProductDesc("");
         setNewProductPrice("");
         setNewProductImage("");
+        setNewProductCategory("footwear");
         // Reload products
         fetchData(vendorId);
       } else {
@@ -703,17 +710,63 @@ export default function VendorDashboard() {
             {/* ADD PRODUCT MODAL/FORM */}
             {showAddForm && (
               <form onSubmit={handleAddProduct} className="bg-white/[0.03] border border-white/10 p-5 rounded-2xl space-y-4">
-                <h3 className="text-sm font-bold text-sleek-300">Add Footwear Sample</h3>
+                <h3 className="text-sm font-bold text-sleek-300">Add New Product</h3>
                 
                 <div>
-                  <label className="block text-[10px] text-gray-500 uppercase font-semibold mb-1">Shoe Name</label>
+                  <label className="block text-[10px] text-gray-500 uppercase font-semibold mb-1">Product Category</label>
+                  <select
+                    value={newProductCategory}
+                    onChange={(e) => {
+                      const cat = e.target.value;
+                      setNewProductCategory(cat);
+                      if (cat === "footwear") {
+                        setNewProductSizes("40, 41, 42, 43, 44");
+                        setNewProductColors("Black, White");
+                      } else if (cat === "clothing") {
+                        setNewProductSizes("S, M, L, XL, XXL");
+                        setNewProductColors("Black, White, Blue, Grey");
+                      } else if (cat === "electronics") {
+                        setNewProductSizes("128GB, 256GB, 512GB");
+                        setNewProductColors("Space Grey, Silver, Black");
+                      } else if (cat === "beauty") {
+                        setNewProductSizes("50ml, 100ml");
+                        setNewProductColors("Default");
+                      } else {
+                        setNewProductSizes("Standard");
+                        setNewProductColors("Default");
+                      }
+                    }}
+                    className="w-full rounded-lg bg-[#111827] border border-white/10 px-3 py-2 text-xs text-white focus:border-[#00c980] outline-none"
+                  >
+                    <option value="footwear">👟 Footwear (Sneakers, Heels, Slides, Sandals)</option>
+                    <option value="clothing">👕 Clothing & Apparel (Tees, Hoodies, Dresses, Streetwear)</option>
+                    <option value="electronics">📱 Phones, Laptops & Gadgets (Audio, Accessories)</option>
+                    <option value="beauty">💄 Beauty, Skincare & Perfumes (Fragrances, Cosmetics)</option>
+                    <option value="accessories">👜 Bags, Jewelry & Watches (Glasses, Accessories)</option>
+                    <option value="home">🏠 Home, Living & Lifestyle</option>
+                    <option value="general">📦 Other Goods & Services</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-gray-500 uppercase font-semibold mb-1">Product Name</label>
                   <input
                     type="text"
                     required
-                    placeholder="Air Max Court"
+                    placeholder={
+                      newProductCategory === "footwear"
+                        ? "e.g. Air Jordan 1 High"
+                        : newProductCategory === "clothing"
+                        ? "e.g. Oversized Streetwear Hoodie"
+                        : newProductCategory === "electronics"
+                        ? "e.g. Apple Watch Ultra 2"
+                        : newProductCategory === "beauty"
+                        ? "e.g. Creed Aventus Eau De Parfum"
+                        : "e.g. Premium Leather Handbag"
+                    }
                     value={newProductName}
                     onChange={(e) => setNewProductName(e.target.value)}
-                    className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2 text-xs focus:border-sleek-500 outline-none"
+                    className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2 text-xs focus:border-[#00c980] outline-none text-white"
                   />
                 </div>
 
@@ -721,10 +774,10 @@ export default function VendorDashboard() {
                   <label className="block text-[10px] text-gray-500 uppercase font-semibold mb-1">Description</label>
                   <textarea
                     required
-                    placeholder="High performance sports sneakers"
+                    placeholder="Describe your product's key features, condition, or specifications"
                     value={newProductDesc}
                     onChange={(e) => setNewProductDesc(e.target.value)}
-                    className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2 text-xs focus:border-sleek-500 outline-none h-16 resize-none"
+                    className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2 text-xs focus:border-[#00c980] outline-none h-16 resize-none text-white"
                   />
                 </div>
 
@@ -737,41 +790,53 @@ export default function VendorDashboard() {
                       placeholder="45000"
                       value={newProductPrice}
                       onChange={(e) => setNewProductPrice(e.target.value)}
-                      className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2 text-xs focus:border-sleek-500 outline-none"
+                      className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2 text-xs focus:border-[#00c980] outline-none text-white font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-gray-500 uppercase font-semibold mb-1">Sizes (CSV)</label>
+                    <label className="block text-[10px] text-gray-500 uppercase font-semibold mb-1">
+                      Sizes / Specs (CSV)
+                    </label>
                     <input
                       type="text"
-                      placeholder="40, 41, 42"
+                      placeholder={
+                        newProductCategory === "clothing"
+                          ? "S, M, L, XL"
+                          : newProductCategory === "electronics"
+                          ? "128GB, 256GB"
+                          : newProductCategory === "beauty"
+                          ? "50ml, 100ml"
+                          : "40, 41, 42, 43"
+                      }
                       value={newProductSizes}
                       onChange={(e) => setNewProductSizes(e.target.value)}
-                      className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2 text-xs focus:border-sleek-500 outline-none"
+                      className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2 text-xs focus:border-[#00c980] outline-none text-white"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-gray-500 uppercase font-semibold mb-1">Colors (CSV)</label>
+                  <label className="block text-[10px] text-gray-500 uppercase font-semibold mb-1">
+                    Colors / Finishes (CSV)
+                  </label>
                   <input
                     type="text"
-                    placeholder="Black, White, Red"
+                    placeholder="Black, White, Space Gray, Gold"
                     value={newProductColors}
                     onChange={(e) => setNewProductColors(e.target.value)}
-                    className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2 text-xs focus:border-sleek-500 outline-none"
+                    className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2 text-xs focus:border-[#00c980] outline-none text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-gray-500 uppercase font-semibold mb-1">Image URL</label>
+                  <label className="block text-[10px] text-gray-500 uppercase font-semibold mb-1">Product Image URL</label>
                   <input
                     type="text"
                     required
                     placeholder="https://images.unsplash.com/..."
                     value={newProductImage}
                     onChange={(e) => setNewProductImage(e.target.value)}
-                    className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2 text-xs focus:border-sleek-500 outline-none"
+                    className="w-full rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2 text-xs focus:border-[#00c980] outline-none text-white"
                   />
                 </div>
 
@@ -779,17 +844,17 @@ export default function VendorDashboard() {
                   <button
                     type="button"
                     onClick={() => setShowAddForm(false)}
-                    className="flex-1 rounded-lg border border-white/10 py-2 text-xs font-semibold hover:bg-white/5 transition"
+                    className="flex-1 rounded-lg border border-white/10 py-2 text-xs font-semibold hover:bg-white/5 transition text-gray-300"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isAddingProduct}
-                    className="flex-1 rounded-lg bg-sleek-500 py-2 font-bold text-white text-xs hover:bg-sleek-600 transition flex items-center justify-center gap-1"
+                    className="flex-1 rounded-lg bg-[#00c980] py-2 font-bold text-white text-xs hover:bg-[#059669] transition flex items-center justify-center gap-1 shadow-lg shadow-[#00c980]/20"
                   >
                     {isAddingProduct && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    Add Shoe
+                    Add Product
                   </button>
                 </div>
               </form>
@@ -799,7 +864,7 @@ export default function VendorDashboard() {
             <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
               {products.length === 0 ? (
                 <p className="text-xs text-gray-500 italic p-6 border border-white/5 rounded-2xl bg-white/[0.01]">
-                  No footwear samples uploaded. Use the &apos;+&apos; button to add shoes.
+                  No products uploaded yet. Use the &apos;+&apos; button to add your first product.
                 </p>
               ) : (
                 products.map((p) => (

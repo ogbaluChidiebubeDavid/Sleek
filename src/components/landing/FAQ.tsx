@@ -7,12 +7,12 @@ import { getWhatsAppLink } from "@/lib/utils";
 
 const faqs = [
   {
-    q: "How do I start buying footwear?",
-    a: 'Click Get Started. WhatsApp opens with "Hello I want to buy footwear" prefilled. Sleek sends the catalogue carousel with Buy and Add to cart buttons.',
+    q: "How do I start shopping or selling with Sleek?",
+    a: 'Click Get Started or open our Telegram bot. Our AI shopping assistant greets you immediately with live product catalogues, category filters, and 1-tap checkout.',
   },
   {
-    q: "Can I pay with Opay like on Temu?",
-    a: "Yes. At checkout, select Opay. You'll authorize payment with your Opay transaction PIN in the Opay app.",
+    q: "Can any vendor sell products on Sleek?",
+    a: "Yes! Whether you sell footwear, clothing, gadgets, beauty & perfumes, jewelry, or home goods, you can register in seconds on our Vendor Portal, upload products, and let AI automate your customer chats and sales 24/7.",
   },
   {
     q: "Which cryptocurrencies are supported?",

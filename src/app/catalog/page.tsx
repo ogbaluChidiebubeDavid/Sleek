@@ -37,6 +37,7 @@ type Product = {
   description: string;
   price: number;
   imageUrl: string;
+  category?: string;
   colors: string[];
   sizes: string[];
   starRating?: number;
@@ -79,6 +80,7 @@ function CatalogContent() {
   const [inTelegram, setInTelegram] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>("all");
   const [cartOpen, setCartOpen] = useState(false);
   const [cart, setCart] = useState<
     { product: Product; color: string; size: string; quantity: number }[]
@@ -738,12 +740,93 @@ function CatalogContent() {
         </div>
       </header>
 
-      <div className="bg-[#25D366]/10 border-b border-[#25D366]/20 px-4 py-3 text-sm text-[#25D366] font-medium text-center">
-        Free delivery on orders over ₦80,000 this week!
+      <div className="bg-[#25D366]/10 border-b border-[#25D366]/20 px-4 py-2.5 text-xs text-[#25D366] font-medium text-center">
+        ⚡ Multi-Vendor Verified Stores • 1-Tap Checkout • Fast Delivery
+      </div>
+
+      {/* CATEGORY SELECTOR TABS */}
+      <div className="flex gap-2 overflow-x-auto px-4 py-3 bg-[#111c24]/90 border-b border-white/5 no-scrollbar">
+        {[
+          { id: "all", label: "🌟 All" },
+          { id: "footwear", label: "👟 Footwear" },
+          { id: "clothing", label: "👕 Apparel" },
+          { id: "electronics", label: "📱 Gadgets" },
+          { id: "beauty", label: "💄 Beauty" },
+          { id: "accessories", label: "👜 Accessories" },
+          { id: "home", label: "🏠 Home" },
+        ].map((cat) => {
+          const isActive = activeCategory === cat.id;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                isActive
+                  ? "bg-[#25D366] text-black shadow-md shadow-[#25D366]/20 font-bold"
+                  : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {cat.label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-2 gap-3.5 p-4">
-        {products.map((p) => {
+        {products
+          .filter((p) => {
+            if (activeCategory === "all") return true;
+            const cat = (p.category || "").toLowerCase();
+            if (activeCategory === "footwear")
+              return (
+                cat.includes("footwear") ||
+                cat.includes("sneaker") ||
+                cat.includes("slide") ||
+                cat.includes("shoe") ||
+                cat.includes("heel") ||
+                cat.includes("boot") ||
+                cat.includes("sandals") ||
+                !cat
+              );
+            if (activeCategory === "clothing")
+              return (
+                cat.includes("cloth") ||
+                cat.includes("apparel") ||
+                cat.includes("hoodie") ||
+                cat.includes("tee") ||
+                cat.includes("shirt") ||
+                cat.includes("dress") ||
+                cat.includes("wear")
+              );
+            if (activeCategory === "electronics")
+              return (
+                cat.includes("electronic") ||
+                cat.includes("gadget") ||
+                cat.includes("phone") ||
+                cat.includes("laptop") ||
+                cat.includes("watch") ||
+                cat.includes("audio")
+              );
+            if (activeCategory === "beauty")
+              return (
+                cat.includes("beauty") ||
+                cat.includes("perfume") ||
+                cat.includes("fragrance") ||
+                cat.includes("skin") ||
+                cat.includes("cosmetic")
+              );
+            if (activeCategory === "accessories")
+              return (
+                cat.includes("accessor") ||
+                cat.includes("bag") ||
+                cat.includes("jewelry") ||
+                cat.includes("glasses")
+              );
+            if (activeCategory === "home")
+              return cat.includes("home") || cat.includes("living");
+            return cat.includes(activeCategory);
+          })
+          .map((p) => {
           const variant = selected[p.id] || {
             color: p.colors[0],
             size: p.sizes[0],
@@ -761,7 +844,7 @@ function CatalogContent() {
                 
                 {/* Brand Badge */}
                 <span className="absolute left-2 top-2 rounded bg-[#0b141a]/85 border border-[#25D366]/30 px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider text-[#25D366]">
-                  SLEEK FOOTWEAR CO.
+                  SLEEK VERIFIED
                 </span>
               </div>
               

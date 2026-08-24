@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { vendorId, name, description, price, imageUrl, colors, sizes } = await req.json();
+    const { vendorId, name, description, price, imageUrl, category, colors, sizes } = await req.json();
 
     if (!vendorId || !name || !description || !price || !imageUrl) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -43,8 +43,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Default colors & sizes if not provided
-    const colorArray = colors && Array.isArray(colors) ? colors : ["Black", "White"];
-    const sizeArray = sizes && Array.isArray(sizes) ? sizes : ["40", "41", "42", "43", "44"];
+    const colorArray = colors && Array.isArray(colors) && colors.length > 0 ? colors : ["Default"];
+    const sizeArray = sizes && Array.isArray(sizes) && sizes.length > 0 ? sizes : ["Standard"];
 
     const product = await prisma.product.create({
       data: {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
         description,
         price: parseFloat(price),
         imageUrl,
-        category: "sneakers",
+        category: category?.trim().toLowerCase() || "general",
         colors: JSON.stringify(colorArray),
         sizes: JSON.stringify(sizeArray),
         featured: true, // Default to true so it shows up in AI chat carousel

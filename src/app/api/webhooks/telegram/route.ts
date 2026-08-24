@@ -201,7 +201,7 @@ ${order.shippingName || "Customer"} • ${order.shippingAddress || "Delivery Add
             paid: {
               label: "Paid • Order Received",
               emoji: "🟡",
-              desc: "Payment confirmed. Vendor has been alerted to start packaging your footwear.",
+              desc: "Payment confirmed. Vendor has been alerted to start packaging your order.",
             },
             packaging: {
               label: "Being Packaged",

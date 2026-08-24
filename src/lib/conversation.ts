@@ -96,9 +96,9 @@ export async function handleIncomingMessage(
   if (normalized === "i want to check out" || normalized.includes("i want to checkout")) {
     await sendInteractiveButtons(
       phone,
-      "Do you want to add more footwear or continue to checkout?",
+      "Do you want to add more items or continue to checkout?",
       [
-        { id: "view_more", title: "Add more to cart" },
+        { id: "view_more", title: "Add more items" },
         { id: "checkout", title: "Continue checkout" },
       ]
     );
@@ -107,9 +107,13 @@ export async function handleIncomingMessage(
   }
 
   if (
-    normalized.includes("hello, i want to buy footwear") ||
-    (normalized.includes("hello") &&
-      (normalized.includes("footwear") || normalized.includes("buy") || normalized.includes("shoe")))
+    normalized.includes("hello") ||
+    normalized.includes("hi") ||
+    normalized.includes("buy") ||
+    normalized.includes("shop") ||
+    normalized.includes("order") ||
+    normalized.includes("catalogue") ||
+    normalized.includes("catalog")
   ) {
     await sendCatalogueGreeting(phone);
     return;
@@ -148,7 +152,7 @@ export async function handleIncomingMessage(
     });
     await sendTextMessage(
       phone,
-      `*${product.name}* — ${formatCurrency(product.price)}\n\nReply with your preferred color and size.\n\nExample: *Black 42*`
+      `*${product.name}* — ${formatCurrency(product.price)}\n\nReply with your preferred color and size/variant.\n\nExample: *${colors[0] || "Black"} ${sizes[0] || "Standard"}*`
     );
     return;
   }
