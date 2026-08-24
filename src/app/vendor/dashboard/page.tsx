@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   CreditCard,
   AlertCircle,
+  X,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { SleekLogo } from "@/components/brand/SleekLogo";
@@ -117,6 +118,8 @@ export default function VendorDashboard() {
   };
 
   const [isInitiatingKyc, setIsInitiatingKyc] = useState(false);
+  const [diditSessionUrl, setDiditSessionUrl] = useState<string | null>(null);
+  const [showDiditModal, setShowDiditModal] = useState(false);
 
   const handleStartDiditKyc = async () => {
     if (!vendorId) return;
@@ -128,10 +131,12 @@ export default function VendorDashboard() {
         body: JSON.stringify({ vendorId }),
       });
       const data = await res.json();
-      if (data.verificationUrl) {
-        window.location.href = data.verificationUrl;
+      const targetUrl = data.url || data.verificationUrl;
+      if (targetUrl) {
+        setDiditSessionUrl(targetUrl);
+        setShowDiditModal(true);
       } else {
-        alert(data.error || "Could not start Didit session. Please try again.");
+        alert(data.error || data.detail || "Could not start Didit session. Please try again.");
       }
     } catch (e) {
       console.error(e);
@@ -1231,6 +1236,50 @@ export default function VendorDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* DIDIT IN-CONTEXT IFRAME MODAL */}
+      {showDiditModal && diditSessionUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-6">
+          <div className="relative w-full max-w-2xl h-[780px] max-h-[92vh] bg-[#0c1015] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#070b0e]">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-lg bg-[#00c980] flex items-center justify-center font-black text-black text-sm">
+                  D
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    Didit Identity Verification
+                    <span className="text-[10px] text-[#00c980] font-normal font-mono bg-[#00c980]/10 border border-[#00c980]/30 px-2 py-0.5 rounded-full">
+                      InContext Flow
+                    </span>
+                  </h3>
+                  <p className="text-[10px] text-gray-400">Complete the KYC steps below to verify your store</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDiditModal(false);
+                  setDiditSessionUrl(null);
+                  if (vendorId) fetchData(vendorId);
+                }}
+                className="rounded-full p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="flex-1 w-full h-full bg-[#070b0e]">
+              <iframe
+                src={diditSessionUrl}
+                allow="camera; microphone; fullscreen; autoplay; encrypted-media"
+                style={{ width: "100%", height: "100%", border: 0 }}
+                title="Didit Verification Flow"
+              />
+            </div>
           </div>
         </div>
       )}
