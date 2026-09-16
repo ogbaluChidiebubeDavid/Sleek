@@ -3,19 +3,13 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sleek — Turn Chats into Footwear Sales",
+  title: "Sleek AI — Conversational E-Commerce for Africa",
   description:
-    "Buy footwear with Sleek AI on WhatsApp and Telegram. Pay securely with Paystack, Opay, Flutterwave, or Crypto.",
+    "Buy and sell through text. Accessible across WhatsApp, Telegram, and Apple iMessage with KYC-verified vendors and safe payment protection.",
   icons: {
-    icon: [
-      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
-      { url: "/sleek-logo.png", sizes: "192x192", type: "image/png" },
-      { url: "/sleek-logo.png", sizes: "512x512", type: "image/png" },
-    ],
+    icon: "/favicon.png",
     shortcut: "/favicon.ico",
-    apple: [
-      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
-    ],
+    apple: "/apple-touch-icon.png",
   },
 };
 
@@ -24,7 +18,12 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className="antialiased">
+      <head>
+        <link rel="icon" href="/favicon.png?v=3" type="image/png" />
+        <link rel="shortcut icon" href="/favicon.ico?v=3" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
+      </head>
+      <body className="antialiased bg-[#f5f5f7] text-gray-900">
         {/* Telegram Mini App SDK — no-op outside Telegram */}
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         {children}

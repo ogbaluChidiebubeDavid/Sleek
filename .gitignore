@@ -8,4 +8,6 @@ node_modules
 tsconfig.tsbuildinfo
 scratch/
 *.mp4
+.agents/
+sleek/
 

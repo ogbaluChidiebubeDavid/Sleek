@@ -7,24 +7,28 @@ import { getWhatsAppLink } from "@/lib/utils";
 
 const faqs = [
   {
-    q: "How do I start shopping or selling with Sleek?",
-    a: 'Click Get Started or open our Telegram bot. Our AI shopping assistant greets you immediately with live product catalogues, category filters, and 1-tap checkout.',
+    q: "How do I use Sleek on iMessage?",
+    a: "You can use Sleek on iMessage simply by sending a text message to Sleek's number or entering your phone number above. Tell Sleek what you want to buy or send a photo of what you want to sell. When you find a product and ask to connect with the seller, Sleek introduces you and the KYC-verified vendor into a 3-way group thread where you can finalize your deal safely.",
   },
   {
-    q: "Can any vendor sell products on Sleek?",
-    a: "Yes! Whether you sell footwear, clothing, gadgets, beauty & perfumes, jewelry, or home goods, you can register in seconds on our Vendor Portal, upload products, and let AI automate your customer chats and sales 24/7.",
+    q: "How does payment protection work on Sleek?",
+    a: "Sleek holds buyer payments safely until the buyer confirms the item was delivered by the vendor. This completely eliminates 'pay before delivery' scams and fake bank alerts. Once the buyer confirms receipt, the payment is released directly to the vendor's bank account.",
   },
   {
-    q: "Which cryptocurrencies are supported?",
-    a: "We support major stablecoins and tokens including USDC, USDT, BTC, and ETH, with seamless payments on Base.",
+    q: "How is product shipping and delivery handled?",
+    a: "Product shipping is handled directly by the vendors. Because every vendor on Sleek undergoes strict KYC identity verification (face match and government ID check) before onboarding, vendors manage their own dispatch and provide tracking directly to the customer.",
   },
   {
-    q: "How does order tracking work?",
-    a: "After payment you receive a tracking number (e.g. SL-XXXXX). Message Sleek: track SL-XXXXX for live status.",
+    q: "What is Sleek's platform fee?",
+    a: "Listing products is 100% free with no monthly subscription. Sleek only charges a simple, low 1.5% success fee to vendors when a sale successfully completes. There are no complicated hidden fees.",
   },
   {
-    q: "What is the View more flow?",
-    a: "View more opens our full catalogue in WhatsApp's browser. Sign up, browse promotions, manage cart, then checkout in chat.",
+    q: "How does shopping work on WhatsApp and Telegram?",
+    a: "Our conversational commerce on WhatsApp and Telegram remains fully active. On WhatsApp, you chat 1-on-1 with Sleek's AI personal shopper, browse interactive product carousels, choose sizes and colors with native WhatsApp Flows, and checkout via Paystack or OPay. On Telegram, you can launch our native Telegram Mini App storefront with Paystack, OPay, Telegram Stars, or Base crypto checkout.",
+  },
+  {
+    q: "Why do vendors need to complete KYC verification?",
+    a: "To ensure that buyers never deal with anonymous scammers or counterfeiters, all merchants on Sleek must verify their government ID and face biometric before their products are published. This guarantees a safe, high-trust marketplace.",
   },
 ];
 
@@ -32,59 +36,49 @@ export function FAQ() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="py-24 sm:py-28 azza-pattern">
-      <div className="mx-auto max-w-3xl px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: false, margin: "-100px" }}
-          transition={{ duration: 0.65, ease: "easeOut" }}
-          className="text-center mb-12"
-        >
-          <h2 className="font-display text-3xl font-black uppercase text-gray-900">
-            Frequently asked questions
+    <section id="faq" className="py-24 bg-[#f8f9fb] border-t border-black/[0.06]">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6">
+        <div className="text-center mb-12 space-y-2">
+          <h2 className="font-display text-3xl sm:text-4xl font-black uppercase text-gray-950 tracking-tight">
+            Frequently Asked Questions
           </h2>
-          <p className="mt-4 text-gray-600">
-            Can&apos;t find what you&apos;re looking for?{" "}
+          <p className="text-sm text-gray-600">
+            Have more questions about conversational commerce?{" "}
             <a
               href={getWhatsAppLink("I have a question about Sleek")}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-sleek-600 hover:underline"
+              className="font-semibold text-emerald-600 hover:underline"
             >
-              Chat with our team
+              Chat directly with our team
             </a>
           </p>
-        </motion.div>
+        </div>
 
         <div className="space-y-3">
           {faqs.map((faq, i) => (
-            <motion.div
+            <div
               key={faq.q}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, margin: "-100px" }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm"
+              className="rounded-2xl border border-black/[0.06] bg-white overflow-hidden shadow-sm"
             >
               <button
                 type="button"
+                className="flex w-full items-center justify-between p-5 text-left text-sm sm:text-base font-bold text-gray-950 transition hover:bg-gray-50"
                 onClick={() => setOpen(open === i ? null : i)}
-                className="flex w-full items-center justify-between p-5 text-left hover:bg-gray-50 transition"
               >
-                <span className="font-semibold text-gray-900 pr-4">{faq.q}</span>
+                <span>{faq.q}</span>
                 <ChevronDown
-                  className={`h-5 w-5 shrink-0 text-gray-400 transition ${
-                    open === i ? "rotate-180" : ""
+                  className={`h-4 w-4 text-gray-500 transition-transform duration-200 shrink-0 ml-3 ${
+                    open === i ? "rotate-180 text-emerald-600" : ""
                   }`}
                 />
               </button>
               {open === i && (
-                <div className="px-5 pb-5 text-gray-600 text-sm leading-relaxed border-t border-gray-100 pt-4">
+                <div className="border-t border-black/[0.04] px-5 py-4 text-xs sm:text-sm text-gray-600 leading-relaxed bg-gray-50/50">
                   {faq.a}
                 </div>
               )}
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>

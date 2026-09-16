@@ -2,48 +2,67 @@
 
 import { motion } from "framer-motion";
 import { getWhatsAppLink, getTelegramBotLink } from "@/lib/utils";
+import { ArrowUpRight, ShieldCheck, Sparkles, MessageCircle } from "lucide-react";
 
 export function CTA() {
+  const waLink = getWhatsAppLink();
+  const tgLink = getTelegramBotLink();
+  const iMessageNumber = process.env.NEXT_PUBLIC_IMESSAGE_NUMBER || "+15550192831";
+
   return (
-    <section className="py-24 sm:py-28 bg-white">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 30 }}
-        whileInView={{ opacity: 1, scale: 1, y: 0 }}
-        viewport={{ once: false, margin: "-100px" }}
-        transition={{ duration: 0.65, ease: "easeOut" }}
-        className="mx-auto max-w-4xl px-6 text-center"
-      >
-        <div className="rounded-3xl bg-sleek-500 px-8 py-14 text-white shadow-xl shadow-sleek-500/25">
-          <h2 className="font-display text-3xl font-black uppercase sm:text-4xl">
-            Sleek AI: Social Commerce on Autopilot
-          </h2>
-          <p className="mt-4 text-sleek-100 max-w-xl mx-auto">
-            Browse any catalog, cart, checkout in 1 tap, and track orders live — all inside WhatsApp &amp; Telegram.
-          </p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a
-              href={getWhatsAppLink()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block rounded-full bg-white px-10 py-4 font-semibold text-sleek-600 hover:bg-sleek-50 transition"
-            >
-              Get Started
-            </a>
-            <a
-              href={getTelegramBotLink()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-[#2AABEE] px-10 py-4 font-semibold text-white transition hover:bg-[#229ED9]"
-            >
-              {/* Telegram paper-plane icon */}
-              <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
-                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-              </svg>
-              Shop on Telegram
-            </a>
+    <section className="py-24 bg-white relative overflow-hidden border-t border-black/[0.06]">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 text-center">
+        <div className="rounded-[36px] bg-neutral-950 px-8 py-16 text-white shadow-2xl relative overflow-hidden">
+          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 max-w-2xl mx-auto space-y-5">
+            <h2 className="font-display text-3xl sm:text-5xl font-black uppercase tracking-tight text-white leading-tight">
+              Ready to Experience <br />
+              <span className="text-emerald-400">Conversational Commerce?</span>
+            </h2>
+
+            <p className="text-sm sm:text-base text-neutral-300 leading-relaxed">
+              Text our AI line to discover products, connect with KYC-verified merchants, and protect every payment with confidence.
+            </p>
+
+            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3.5">
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-[#00c980] px-7 py-3.5 text-xs font-bold text-white shadow-lg shadow-[#00c980]/20 hover:bg-[#00b372] transition"
+              >
+                <span>Launch WhatsApp AI</span>
+                <ArrowUpRight className="h-4 w-4" />
+              </a>
+
+              <a
+                href={tgLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-white/10 border border-white/15 px-7 py-3.5 text-xs font-bold text-white hover:bg-white/20 transition"
+              >
+                <span>Launch Telegram Store</span>
+                <ArrowUpRight className="h-4 w-4" />
+              </a>
+
+              <a
+                href="#imessage-group"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("highlight-imessage-input"));
+                  }
+                }}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-[#007AFF] px-7 py-3.5 text-xs font-bold text-white shadow-lg shadow-[#007AFF]/20 hover:bg-[#0066d6] transition"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span>Text on iMessage</span>
+              </a>
+            </div>
           </div>
         </div>
-      </motion.div>
+      </div>
     </section>
   );
 }
