@@ -1,31 +1,17 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { 
-  Users, 
-  Lock, 
   Sparkles, 
-  MessageSquare, 
-  Layers, 
-  Smartphone, 
-  ArrowUpRight, 
   ArrowRight,
   CheckCircle,
-  Coins,
   ShieldCheck,
-  Bot,
-  Camera,
   Check,
-  Truck,
-  ShoppingBag
+  Truck
 } from "lucide-react";
-import Image from "next/image";
-import { getWhatsAppLink, getTelegramBotLink } from "@/lib/utils";
+import { getWhatsAppLink } from "@/lib/utils";
 
 export function TriChannelBento() {
-  const waLink = getWhatsAppLink();
-  const tgLink = getTelegramBotLink();
   const [orderNumber, setOrderNumber] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [isGlowing, setIsGlowing] = useState(false);
@@ -87,7 +73,7 @@ export function TriChannelBento() {
             <span className="text-emerald-600">Now in Your Chat.</span>
           </h2>
           <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-            Sleek connects Nigerian buyers with KYC-verified vendors across their favorite messaging platforms. Here is how each channel works:
+            Sleek connects Nigerian buyers with KYC-verified vendors directly on WhatsApp. Discover items, lock deals with safe payment custody, and track live order deliveries in real time.
           </p>
         </div>
 
@@ -247,97 +233,6 @@ export function TriChannelBento() {
                 ✦ Send your order number on WhatsApp to get real-time delivery status &amp; courier updates.
               </p>
             </div>
-          </div>
-
-          {/* CARD 3: Interactive Fashion Shopping (Spans 6 cols) */}
-          <div
-            className="md:col-span-6 rounded-3xl border border-black/[0.08] bg-[#f8f9fb] p-6 sm:p-8 flex flex-col justify-between hover:border-black/20 transition-all shadow-sm"
-          >
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366]/10 border border-[#25D366]/30 px-3 py-1 text-xs font-semibold text-[#128C7E]">
-                <ShoppingBag className="h-3.5 w-3.5" />
-                <span>Interactive Fashion Shopping</span>
-              </div>
-              <h3 className="text-xl sm:text-2xl font-black text-gray-950 font-display uppercase tracking-tight">
-                Curated Drops &amp; Instant Sizing
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                Discover streetwear, activewear, and everyday outfits directly on WhatsApp. Select your exact waist, chest size, and colors using native WhatsApp Flows, then checkout in seconds.
-              </p>
-            </div>
-
-            <div className="my-6 rounded-2xl border border-black/[0.08] bg-white p-4 space-y-2 text-xs shadow-sm">
-              <div className="flex items-center justify-between text-[11px] text-gray-500">
-                <span>Verified Fashion Vendors</span>
-                <span className="font-bold text-gray-900">Streetwear, Casuals &amp; Kicks</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <div className="rounded-xl border border-black/[0.06] p-2 bg-gray-50 text-[11px]">
-                  <strong className="block text-gray-900">WhatsApp Flows</strong>
-                  <span className="text-gray-500">In-chat size (S, M, L, XL, XXL) &amp; color</span>
-                </div>
-                <div className="rounded-xl border border-black/[0.06] p-2 bg-gray-50 text-[11px]">
-                  <strong className="block text-gray-900">Direct Bank &amp; Cards</strong>
-                  <span className="text-gray-500">Instant secure transfer or card debit</span>
-                </div>
-              </div>
-            </div>
-
-            <a
-              href={waLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-bold text-[#128C7E] hover:underline"
-            >
-              <span>Browse Collection on WhatsApp</span>
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </a>
-          </div>
-
-          {/* CARD 4: Instant Mobile Storefront (Spans 6 cols) */}
-          <div
-            className="md:col-span-6 rounded-3xl border border-black/[0.08] bg-[#f8f9fb] p-6 sm:p-8 flex flex-col justify-between hover:border-black/20 transition-all shadow-sm"
-          >
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-[#229ED9]/10 border border-[#229ED9]/30 px-3 py-1 text-xs font-semibold text-[#229ED9]">
-                <Smartphone className="h-3.5 w-3.5" />
-                <span>Instant Mobile Storefront</span>
-              </div>
-              <h3 className="text-xl sm:text-2xl font-black text-gray-950 font-display uppercase tracking-tight">
-                Complete Clothing Storefront
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                Launch the complete Sleek clothing catalog on any smartphone without installing an extra app. Filter styles, compare prices, and checkout with bank transfer, cards, or mobile money.
-              </p>
-            </div>
-
-            <div className="my-6 rounded-2xl border border-black/[0.08] bg-white p-4 space-y-2 text-xs shadow-sm">
-              <div className="flex items-center justify-between text-[11px] text-gray-500">
-                <span>Direct Mobile Store</span>
-                <span className="font-mono text-emerald-600">sleekai.xyz/catalog</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 pt-2 text-[10px] text-center">
-                <div className="rounded-lg bg-gray-50 p-2 border border-black/[0.04]">
-                  🏦 Bank Transfer
-                </div>
-                <div className="rounded-lg bg-gray-50 p-2 border border-black/[0.04]">
-                  💳 Debit Cards (Visa/MC)
-                </div>
-                <div className="rounded-lg bg-gray-50 p-2 border border-black/[0.04]">
-                  ⚡ OPay &amp; Moniepoint
-                </div>
-              </div>
-            </div>
-
-            <a
-              href={tgLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-bold text-[#229ED9] hover:underline"
-            >
-              <span>Launch Clothing Catalog</span>
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </a>
           </div>
 
         </div>
