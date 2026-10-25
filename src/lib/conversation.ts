@@ -14,10 +14,8 @@ function getBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_APP_URL) {
     return process.env.NEXT_PUBLIC_APP_URL;
   }
-  // Hardcode the public production Vercel domain as the default fallback
-  // This bypasses Vercel's login protection wall placed on preview deployments,
-  // allowing Meta Cloud API to crawl/validate links and deliver native buttons!
-  return "https://sleek-brown.vercel.app";
+  // Hardcode the public production domain as the default fallback
+  return "https://www.sleekai.xyz";
 }
 
 type StateData = {

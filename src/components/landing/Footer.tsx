@@ -8,12 +8,6 @@ export function Footer() {
   const waLink = getWhatsAppLink();
   const tgLink = getTelegramBotLink();
 
-  const handleIMessageClick = () => {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("highlight-imessage-input"));
-    }
-  };
-
   return (
     <footer className="border-t border-black/[0.06] bg-[#f5f5f7] py-14 text-xs">
       <div className="mx-auto max-w-7xl px-4 sm:px-8">
@@ -22,7 +16,7 @@ export function Footer() {
           <div className="col-span-2 space-y-3">
             <SleekLogo />
             <p className="text-gray-500 max-w-sm leading-relaxed">
-              The AI-native conversational commerce engine for Africa. Operating across WhatsApp, Telegram, and Apple iMessage with safe payment protection.
+              The AI-native conversational commerce engine for Africa. Operating across WhatsApp and Telegram with safe payment protection.
             </p>
             <div className="pt-2 flex items-center gap-2 text-[11px] font-mono text-gray-500">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -36,25 +30,6 @@ export function Footer() {
               Channels
             </span>
             <ul className="space-y-2 text-gray-600">
-              <li>
-                <a 
-                  href="#price-appraisal" 
-                  onClick={handleIMessageClick}
-                  className="hover:text-black transition font-semibold text-[#007AFF] flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span className="text-[#007AFF]">💬</span>
-                  <span>Text on iMessage</span>
-                </a>
-              </li>
-              <li>
-                <a 
-                  href="#imessage-group" 
-                  onClick={handleIMessageClick}
-                  className="hover:text-black transition"
-                >
-                  iMessage 3-Way Deal Room
-                </a>
-              </li>
               <li>
                 <a href={waLink} target="_blank" rel="noopener noreferrer" className="hover:text-black transition">
                   WhatsApp AI Shopper

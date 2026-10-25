@@ -166,8 +166,8 @@ model EscrowDeal {
   id              String      @id @default(cuid())
   listingId       String?
   listing         P2PListing? @relation(fields: [listingId], references: [id])
-  platform        String      @default("imessage") // "imessage", "whatsapp", "telegram"
-  threadId        String?     // e.g. iMessage 3-way group thread ID
+  platform        String      @default("whatsapp") // "whatsapp", "telegram"
+  threadId        String?     // e.g. chat thread ID
   buyerPhone      String
   sellerPhone     String
   itemTitle       String

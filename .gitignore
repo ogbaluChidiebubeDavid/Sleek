@@ -10,4 +10,5 @@ scratch/
 *.mp4
 .agents/
 sleek/
-
+artifacts/
+lib/

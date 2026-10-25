@@ -26,17 +26,14 @@ export function TriChannelBento() {
   const tgLink = getTelegramBotLink();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [groupPhone, setGroupPhone] = useState("");
-  const [groupSubmitted, setGroupSubmitted] = useState(false);
   const [isGlowing, setIsGlowing] = useState(false);
-  const iMessageLineNumber = process.env.NEXT_PUBLIC_IMESSAGE_NUMBER || "+15550192831";
 
   // Trigger electric glowing outline & animation on redirect from footer or navbar
   useEffect(() => {
     const handleTriggerGlow = () => {
       setIsGlowing(true);
       if (typeof document !== "undefined") {
-        const target = document.getElementById("price-appraisal") || document.getElementById("imessage-group");
+        const target = document.getElementById("price-appraisal");
         if (target) {
           target.scrollIntoView({ behavior: "smooth", block: "center" });
         }
@@ -51,38 +48,27 @@ export function TriChannelBento() {
     };
 
     if (typeof window !== "undefined") {
-      if (window.location.hash === "#price-appraisal" || window.location.hash === "#imessage-group") {
+      if (window.location.hash === "#price-appraisal") {
         setTimeout(handleTriggerGlow, 200);
       }
       const onHash = () => {
-        if (window.location.hash === "#price-appraisal" || window.location.hash === "#imessage-group") {
+        if (window.location.hash === "#price-appraisal") {
           handleTriggerGlow();
         }
       };
       window.addEventListener("hashchange", onHash);
-      window.addEventListener("highlight-imessage-input", handleTriggerGlow);
       return () => {
         window.removeEventListener("hashchange", onHash);
-        window.removeEventListener("highlight-imessage-input", handleTriggerGlow);
       };
     }
   }, []);
-
-  const handleGroupSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!groupPhone.trim()) return;
-    setGroupSubmitted(true);
-    if (typeof window !== "undefined") {
-      window.location.href = `sms:${iMessageLineNumber}?&body=${encodeURIComponent("Hi Sleek! Please create a 3-way iMessage deal room with Ade Tech for my purchase.")}`;
-    }
-  };
 
   const handleAppraisalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!phoneNumber.trim()) return;
     setSubmitted(true);
     if (typeof window !== "undefined") {
-      window.location.href = `sms:${iMessageLineNumber}?&body=${encodeURIComponent("Hi Sleek! I'm sending a photo of my item for instant market appraisal.")}`;
+      window.open(getWhatsAppLink(`Hi Sleek! I want an instant market appraisal for my item. My contact: ${phoneNumber}`), "_blank");
     }
   };
 
@@ -104,24 +90,24 @@ export function TriChannelBento() {
         {/* Bento Grid */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
 
-          {/* CARD 1: iMessage 3-Way Group Room (Spans 8 cols on desktop) */}
+          {/* CARD 1: WhatsApp Conversational Terminal & Escrow Hold (Spans 8 cols on desktop) */}
           <div
-            id="imessage-group"
+            id="deal-terminal"
             className="md:col-span-7 lg:col-span-8 rounded-3xl border border-black/[0.08] bg-[#f8f9fb] p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden group hover:border-black/20 transition-all shadow-sm scroll-mt-24"
           >
-            <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
             <div className="space-y-4 max-w-xl z-10">
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200/60 px-3 py-1 text-xs font-semibold text-[#007AFF]">
-                <Users className="h-3.5 w-3.5" />
-                <span>iMessage Exclusive Feature</span>
+              <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200/60 px-3 py-1 text-xs font-semibold text-emerald-700">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Conversational Deal Terminal</span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-black text-gray-950 font-display uppercase tracking-tight">
-                Better in Groups. <br />
-                The 3-Way Deal Room.
+                Natural Language Commerce. <br />
+                From Inquiry to Escrow.
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                When a buyer on iMessage says <em className="text-gray-900 font-medium">“connect me w the seller”</em>, Sleek AI automatically creates a 3-way iMessage group chat connecting <strong className="text-gray-900">Buyer, KYC-Verified Vendor, and Sleek AI</strong>.
+                Describe what you want in everyday Pidgin or English, or upload an image. Sleek AI searches live inventory from KYC-verified Nigerian vendors, locks the deal price, and holds buyer funds safely until inspection.
               </p>
             </div>
 
@@ -130,24 +116,24 @@ export function TriChannelBento() {
               <div className="flex items-center justify-between border-b border-black/[0.05] pb-2.5">
                 <div className="flex items-center gap-2">
                   <div className="flex -space-x-1">
-                    <span className="h-5 w-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] font-bold">B</span>
-                    <span className="h-5 w-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold">V</span>
-                    <span className="h-5 w-5 rounded-full bg-black text-white flex items-center justify-center text-[9px] font-bold">AI</span>
+                    <span className="h-5 w-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold">U</span>
+                    <span className="h-5 w-5 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[9px] font-bold">AI</span>
+                    <span className="h-5 w-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] font-bold">V</span>
                   </div>
-                  <span className="font-bold text-gray-900">iMessage Group: Sleek Deal #849</span>
+                  <span className="font-bold text-gray-900">Sleek Verified Trade #9042</span>
                 </div>
                 <span className="rounded bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-mono font-semibold flex items-center gap-1">
-                  <ShieldCheck className="h-3 w-3" /> Protected
+                  <ShieldCheck className="h-3 w-3" /> Safe Escrow Hold
                 </span>
               </div>
 
               <div className="space-y-2">
                 <div className="rounded-xl bg-gray-50 border border-black/[0.04] p-2.5 text-gray-700 leading-relaxed">
-                  <strong className="text-black">Sleek AI:</strong> “Connecting you two! Tunde is a KYC-verified vendor. Agreed price is <strong>₦350,000</strong>. Sleek safely holds your payment until you receive and confirm your item.”
+                  <strong className="text-black">Sleek AI:</strong> “Matched! Tunde (KYC Verified ✓) in Ikeja has MacBook Air M2 256GB ready for dispatch at <strong>₦850,000</strong>. Payment will be held safely in escrow until you confirm delivery.”
                 </div>
                 <div className="flex items-center justify-between rounded-xl bg-emerald-500/[0.08] border border-emerald-500/20 px-3 py-2 text-[11px]">
-                  <span className="font-semibold text-emerald-950">✓ ₦350,000 Protected in Safe Payment Hold</span>
-                  <span className="font-mono text-emerald-700 font-bold">Low 1.5% Success Fee</span>
+                  <span className="font-semibold text-emerald-950">✓ ₦850,000 Held in Safe Custody</span>
+                  <span className="font-mono text-emerald-700 font-bold">1.5% Fee on Confirmation</span>
                 </div>
               </div>
             </div>
@@ -155,20 +141,20 @@ export function TriChannelBento() {
             <div className="mt-6 pt-4 border-t border-black/[0.06] grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div>
                 <span className="font-bold text-gray-900 block">KYC-Verified Vendors</span>
-                <span className="text-gray-500">Every seller is identity-verified via face match and national ID.</span>
+                <span className="text-gray-500">Every seller is identity-verified via facial match and national ID.</span>
               </div>
               <div>
                 <span className="font-bold text-gray-900 block">Vendor-Handled Shipping</span>
-                <span className="text-gray-500">Vendors manage their own product dispatch with direct tracking.</span>
+                <span className="text-gray-500">Vendors manage dispatch with direct tracking straight to your door.</span>
               </div>
               <div>
                 <span className="font-bold text-gray-900 block">Protected Payout</span>
-                <span className="text-gray-500">Payment is released to the vendor only when the buyer confirms delivery.</span>
+                <span className="text-gray-500">Payment is released to the seller only when you confirm receipt.</span>
               </div>
             </div>
           </div>
 
-          {/* CARD 2: Autonomous Appraisal & Sourcing with ANIMATED PHONE INPUT FIELD (Spans 5/4 cols) */}
+          {/* CARD 2: Autonomous Appraisal & Sourcing (Spans 5/4 cols) */}
           <div
             id="price-appraisal"
             className="md:col-span-5 lg:col-span-4 rounded-3xl border border-black/[0.08] bg-[#f8f9fb] p-6 sm:p-8 flex flex-col justify-between hover:border-black/20 transition-all shadow-sm relative scroll-mt-24"
@@ -209,17 +195,17 @@ export function TriChannelBento() {
               </div>
             </div>
 
-            {/* PHONE NUMBER INPUT FIELD WITH ANIMATED GLOWING OUTLINE UPON FOOTER CLICK */}
+            {/* PHONE NUMBER INPUT FIELD WITH ANIMATED GLOWING OUTLINE UPON CLICK */}
             <div className="space-y-2 pt-1 border-t border-black/[0.06]">
               <div className="text-[11px] font-bold text-gray-900 flex items-center justify-between">
-                <span>Text our line for an appraisal:</span>
-                <span className="text-[10px] font-mono text-[#007AFF] font-medium">iMessage • SMS</span>
+                <span>WhatsApp appraisal request:</span>
+                <span className="text-[10px] font-mono text-emerald-600 font-medium">Instant AI</span>
               </div>
 
               {submitted ? (
                 <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex items-center gap-2 text-xs text-emerald-800">
                   <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span>Opening iMessage line with appraisal prompt...</span>
+                  <span>Connecting to WhatsApp appraisal line...</span>
                 </div>
               ) : (
                 <form onSubmit={handleAppraisalSubmit} className="relative flex items-center">
@@ -231,15 +217,15 @@ export function TriChannelBento() {
                     placeholder="Enter phone number (e.g. 080...)"
                     className={`w-full rounded-2xl border bg-white py-3 pl-3.5 pr-28 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none transition-all duration-300 shadow-inner ${
                       isGlowing 
-                        ? "border-[#007AFF] ring-4 ring-[#007AFF]/60 shadow-[0_0_25px_rgba(0,122,255,0.5)] scale-[1.01]" 
-                        : "border-black/15 focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20"
+                        ? "border-emerald-500 ring-4 ring-emerald-500/40 shadow-[0_0_25px_rgba(0,201,128,0.4)] scale-[1.01]" 
+                        : "border-black/15 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                     }`}
                   />
                   <button
                     type="submit"
-                    className="absolute right-1 top-1 bottom-1 rounded-xl bg-[#007AFF] px-3.5 text-xs font-bold text-white hover:bg-[#006ee6] active:scale-95 transition flex items-center gap-1 shadow-xs cursor-pointer"
+                    className="absolute right-1 top-1 bottom-1 rounded-xl bg-emerald-600 px-3.5 text-xs font-bold text-white hover:bg-emerald-700 active:scale-95 transition flex items-center gap-1 shadow-xs cursor-pointer"
                   >
-                    <span>Text Sleek</span>
+                    <span>Appraise</span>
                     <ArrowRight className="h-3 w-3" />
                   </button>
                 </form>
@@ -315,7 +301,7 @@ export function TriChannelBento() {
             <div className="my-6 rounded-2xl border border-black/[0.08] bg-white p-4 space-y-2 text-xs shadow-sm">
               <div className="flex items-center justify-between text-[11px] text-gray-500">
                 <span>Telegram WebApp Store</span>
-                <span className="font-mono text-blue-600">sleek-brown.vercel.app/catalog</span>
+                <span className="font-mono text-emerald-600">sleekai.xyz/catalog</span>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-2 text-[10px] text-center">
                 <div className="rounded-lg bg-gray-50 p-2 border border-black/[0.04]">

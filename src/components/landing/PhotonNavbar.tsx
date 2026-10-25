@@ -40,19 +40,15 @@ export function PhotonNavbar() {
 
         {/* Action CTAs */}
         <div className="hidden items-center gap-3 sm:flex">
-          {/* iMessage 3-Way Exclusive Button (moved before Telegram) */}
           <a
-            href="#imessage-group"
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("highlight-imessage-input"));
-              }
-            }}
-            className="inline-flex items-center gap-1.5 rounded-full border border-blue-200/80 bg-blue-50/80 px-3.5 py-1.5 text-xs font-semibold text-[#007AFF] shadow-sm transition hover:bg-blue-100 hover:border-blue-300 active:scale-95 cursor-pointer"
+            href={waLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-50/80 px-3.5 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm transition hover:bg-emerald-100 hover:border-emerald-500/40 active:scale-95 cursor-pointer"
           >
-            <span>💬 iMessage 3-Way</span>
-            <span className="rounded bg-[#007AFF] px-1.5 py-0.2 text-[8px] font-bold text-white uppercase tracking-wider">
-              Exclusive
+            <span>💬 WhatsApp Assistant</span>
+            <span className="rounded bg-[#00c980] px-1.5 py-0.2 text-[8px] font-bold text-white uppercase tracking-wider">
+              Live
             </span>
           </a>
 
@@ -99,9 +95,8 @@ export function PhotonNavbar() {
           className="border-b border-black/10 bg-white px-6 py-6 shadow-2xl lg:hidden transition-all duration-200"
         >
           <div className="flex flex-col gap-4 text-sm font-semibold text-gray-900">
-            <a href="#imessage-group" onClick={() => setOpen(false)} className="py-1 flex items-center justify-between text-[#007AFF]">
-              <span>iMessage 3-Way Group Room</span>
-              <span className="rounded bg-[#007AFF] px-1.5 py-0.2 text-[9px] text-white uppercase font-bold">EXCLUSIVE</span>
+            <a href="#features" onClick={() => setOpen(false)} className="py-1 hover:text-emerald-600 transition">
+              Conversational Features
             </a>
             <a href="#faq" onClick={() => setOpen(false)} className="py-1 hover:text-emerald-600 transition">
               FAQ
@@ -110,13 +105,6 @@ export function PhotonNavbar() {
               Vendor Portal
             </Link>
             <div className="pt-3 flex flex-col gap-2.5">
-              <a
-                href="#imessage-group"
-                onClick={() => setOpen(false)}
-                className="flex items-center justify-center gap-2 rounded-xl bg-[#007AFF] py-3 text-center text-sm font-bold text-white shadow-md shadow-[#007AFF]/20"
-              >
-                <span>💬 Start on iMessage</span>
-              </a>
               <a
                 href={waLink}
                 target="_blank"

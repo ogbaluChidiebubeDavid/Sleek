@@ -7,8 +7,8 @@ import { getWhatsAppLink } from "@/lib/utils";
 
 const faqs = [
   {
-    q: "How do I use Sleek on iMessage?",
-    a: "You can use Sleek on iMessage simply by sending a text message to Sleek's number or entering your phone number above. Tell Sleek what you want to buy or send a photo of what you want to sell. When you find a product and ask to connect with the seller, Sleek introduces you and the KYC-verified vendor into a 3-way group thread where you can finalize your deal safely.",
+    q: "How do I use Sleek on WhatsApp?",
+    a: "You can start shopping on Sleek instantly on WhatsApp by tapping 'Start on WhatsApp' or texting our line. Chat with Sleek's conversational AI shopper, describe what you are looking for (or upload an image), browse interactive product cards, and checkout securely with Paystack or OPay.",
   },
   {
     q: "How does payment protection work on Sleek?",

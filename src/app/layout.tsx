@@ -3,9 +3,10 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sleek AI — Conversational E-Commerce for Africa",
+  metadataBase: new URL("https://www.sleekai.xyz"),
+  title: "Sleek AI — Conversational E-Commerce Protocol",
   description:
-    "Buy and sell through text. Accessible across WhatsApp, Telegram, and Apple iMessage with KYC-verified vendors and safe payment protection.",
+    "Buy and sell through text. Autonomous conversational commerce powered by AI on WhatsApp and Telegram with KYC-verified vendors and escrow payment protection.",
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.ico",

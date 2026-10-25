@@ -17,19 +17,16 @@ import {
 } from "lucide-react";
 import { getWhatsAppLink, getTelegramBotLink } from "@/lib/utils";
 
-type ChannelType = "imessage" | "whatsapp" | "telegram";
+type ChannelType = "whatsapp" | "telegram";
 
-const CHANNELS: ChannelType[] = ["imessage", "whatsapp", "telegram"];
+const CHANNELS: ChannelType[] = ["whatsapp", "telegram"];
 
 export function PhotonStyleHero() {
-  const [activeChannel, setActiveChannel] = useState<ChannelType>("imessage");
+  const [activeChannel, setActiveChannel] = useState<ChannelType>("whatsapp");
   const [cycleKey, setCycleKey] = useState(0);
-  const [showHeroPhoneInput, setShowHeroPhoneInput] = useState(false);
-  const [heroPhone, setHeroPhone] = useState("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const waLink = getWhatsAppLink();
   const tgLink = getTelegramBotLink();
-  const iMessageLineNumber = process.env.NEXT_PUBLIC_IMESSAGE_NUMBER || "+15550192831";
 
   // Automatic 5-Second Channel Preview Loop
   const startLoop = () => {
@@ -55,21 +52,6 @@ export function PhotonStyleHero() {
     setActiveChannel(ch);
     setCycleKey((k) => k + 1);
     startLoop();
-  };
-
-  const handleHeroPhoneSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!heroPhone.trim()) return;
-
-    if (typeof window !== "undefined") {
-      window.location.href = `sms:${iMessageLineNumber}?&body=${encodeURIComponent(
-        `Hi Sleek AI! My number is ${heroPhone.trim()}. I want to start shopping & selling on iMessage.`
-      )}`;
-    }
-
-    // Immediately hide the input again and return to original hero layout
-    setShowHeroPhoneInput(false);
-    setHeroPhone("");
   };
 
   return (
@@ -98,7 +80,7 @@ export function PhotonStyleHero() {
 
             {/* Description */}
             <p className="max-w-xl text-sm sm:text-base text-gray-600 font-medium leading-relaxed">
-              Footwear, fashion, gadgets, beauty, and tech. Discover items through conversational AI, text our line to list in seconds, and trade safely with KYC-verified vendors on <strong className="text-gray-900 font-semibold">WhatsApp</strong>, <strong className="text-gray-900 font-semibold">Telegram</strong>, and <strong className="text-gray-900 font-semibold">iMessage</strong>.
+              Footwear, fashion, gadgets, beauty, and tech. Discover items through conversational AI, text our line to list in seconds, and trade safely with KYC-verified vendors on <strong className="text-gray-900 font-semibold">WhatsApp</strong> and <strong className="text-gray-900 font-semibold">Telegram</strong>.
             </p>
 
             {/* Clean Inline Preview Line: Automatic 5-Second Channel Preview Loop */}
@@ -107,29 +89,6 @@ export function PhotonStyleHero() {
                 Preview Line:
               </span>
               <div className="inline-flex p-1 rounded-2xl bg-black/[0.05] border border-black/[0.06] relative">
-                {/* iMessage Tab */}
-                <button
-                  type="button"
-                  onClick={() => selectChannel("imessage")}
-                  className={`relative overflow-hidden flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
-                    activeChannel === "imessage"
-                      ? "bg-white text-gray-950 shadow-sm border border-black/5 ring-1 ring-[#007AFF]/30"
-                      : "text-gray-600 hover:text-gray-950"
-                  }`}
-                >
-                  <span className="text-[#007AFF]">💬</span>
-                  <span>iMessage 3-Way</span>
-                  {activeChannel === "imessage" && (
-                    <motion.div
-                      key={`bar-imessage-${cycleKey}`}
-                      initial={{ width: "0%" }}
-                      animate={{ width: "100%" }}
-                      transition={{ duration: 5, ease: "linear" }}
-                      className="absolute bottom-0 left-0 h-0.5 bg-[#007AFF]"
-                    />
-                  )}
-                </button>
-
                 {/* WhatsApp Tab */}
                 <button
                   type="button"
@@ -176,48 +135,6 @@ export function PhotonStyleHero() {
               </div>
             </div>
 
-            {/* Dynamic Phone Number Input Field: Hidden by default, revealed on clicking Start on iMessage */}
-            {showHeroPhoneInput && (
-              <div className="w-full max-w-lg rounded-2xl border border-[#007AFF] bg-white p-3.5 shadow-xl shadow-[#007AFF]/10 z-20">
-                <form onSubmit={handleHeroPhoneSubmit} className="space-y-2">
-                  <div className="flex items-center justify-between text-xs font-semibold text-gray-800">
-                    <span className="flex items-center gap-1.5">
-                      <span className="text-[#007AFF]">💬</span>
-                      <span>Start on iMessage — Enter phone number:</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowHeroPhoneInput(false)}
-                      className="h-5 w-5 rounded-full bg-gray-100 text-gray-400 hover:text-gray-700 hover:bg-gray-200 flex items-center justify-center text-[10px] font-bold transition cursor-pointer"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <div className="relative flex items-center">
-                    <input
-                      type="tel"
-                      id="hero-phone-input"
-                      autoFocus
-                      value={heroPhone}
-                      onChange={(e) => setHeroPhone(e.target.value)}
-                      placeholder="Enter phone number (e.g. 0801 234 5678)"
-                      className="w-full rounded-xl border border-black/15 bg-gray-50/50 py-2.5 pl-3.5 pr-32 text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#007AFF] focus:bg-white focus:ring-2 focus:ring-[#007AFF]/20 transition shadow-inner"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!heroPhone.trim()}
-                      className="absolute right-1 top-1 bottom-1 rounded-lg bg-[#007AFF] px-3.5 text-xs font-bold text-white hover:bg-[#006ee6] active:scale-95 transition flex items-center gap-1 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
-                    >
-                      <span>Text Sleek →</span>
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-gray-500 font-mono">
-                    ✦ Sleek opens your iMessage line to create an instant deal thread.
-                  </p>
-                </form>
-              </div>
-            )}
-
             {/* Quick Action CTAs */}
             <div className="flex flex-wrap gap-3 pt-2">
               <a
@@ -243,23 +160,6 @@ export function PhotonStyleHero() {
                 </svg>
                 <span>Shop on Telegram</span>
               </a>
-
-              {/* Start on iMessage: Toggles the phone number entry input directly above the CTA button group */}
-              <button
-                type="button"
-                id="hero-start-imessage-btn"
-                onClick={() => {
-                  setShowHeroPhoneInput((prev) => !prev);
-                  setTimeout(() => {
-                    const input = document.getElementById("hero-phone-input") as HTMLInputElement;
-                    if (input) input.focus();
-                  }, 50);
-                }}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#007AFF] px-6 py-3.5 text-xs font-bold text-white shadow-lg shadow-[#007AFF]/25 transition hover:bg-[#006ee6] active:scale-98 cursor-pointer"
-              >
-                <MessageSquare className="h-4 w-4" />
-                <span>Start on iMessage</span>
-              </button>
             </div>
 
             {/* Micro Trust Stats */}
@@ -378,114 +278,6 @@ export function PhotonStyleHero() {
                         transition={{ duration: 0.3, ease: "easeInOut" }}
                         className="w-full h-full flex-1 flex flex-col"
                       >
-                        {activeChannel === "imessage" && (
-                          <div className="flex-1 h-full flex flex-col text-xs bg-[#f8f9fb]">
-                            {/* iMessage Top Nav */}
-                            <div className="bg-white/95 backdrop-blur-md border-b border-black/[0.06] px-3.5 py-2 flex items-center justify-between shrink-0">
-                              <span className="text-[#007AFF] text-xs font-semibold">‹ Back</span>
-                              <div className="flex flex-col items-center text-center">
-                                <div className="flex -space-x-1 mb-0.5">
-                                  <span className="h-4.5 w-4.5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[8px] font-bold">B</span>
-                                  <span className="h-4.5 w-4.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[8px] font-bold">A</span>
-                                  <span className="h-4.5 w-4.5 rounded-full bg-black text-white flex items-center justify-center text-[8px] font-bold">AI</span>
-                                </div>
-                                <span className="font-bold text-gray-950 text-[11px]">Sleek Deal: MacBook Air M2</span>
-                                <span className="text-[9px] text-gray-500">3 People (You, Ade [Verified], Sleek AI)</span>
-                              </div>
-                              <div className="w-6" />
-                            </div>
-
-                            {/* iMessage Messages */}
-                            <div className="flex-1 p-3 space-y-2 overflow-y-auto">
-                              <div className="flex justify-end">
-                                <div className="rounded-2xl rounded-tr-xs bg-[#007AFF] text-white px-3 py-1.5 max-w-[82%] leading-relaxed shadow-sm">
-                                  Yo find me a clean M2 MacBook Air in Lekki under ₦900k
-                                </div>
-                              </div>
-
-                              <div className="flex justify-start">
-                                <div className="rounded-2xl rounded-tl-xs bg-white border border-black/[0.08] p-2 max-w-[90%] shadow-sm space-y-1.5">
-                                  <div className="relative h-24 w-full rounded-lg overflow-hidden bg-gray-100">
-                                    <Image
-                                      src="https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=500&h=300&fit=crop"
-                                      alt="MacBook Air M2"
-                                      fill
-                                      unoptimized
-                                      className="object-cover"
-                                    />
-                                    <span className="absolute top-1.5 right-1.5 rounded bg-black/80 px-1.5 py-0.5 text-[9px] font-mono font-bold text-white">
-                                      ₦850,000
-                                    </span>
-                                  </div>
-                                  <div className="font-bold text-gray-950 text-[11px]">MacBook Air M2 • 256GB SSD</div>
-                                  <div className="text-[9px] text-gray-500">📍 Lekki Phase 1 • 98% Battery Health</div>
-                                  <div className="pt-1 border-t border-black/[0.05] flex items-center justify-between text-[9px] text-emerald-700 font-semibold">
-                                    <span>✓ Ade Tech (KYC Verified)</span>
-                                    <span className="text-gray-400">Tap to connect</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="flex justify-end">
-                                <div className="rounded-2xl rounded-tr-xs bg-[#007AFF] text-white px-3 py-1.5 max-w-[80%] shadow-sm">
-                                  Connect me w the seller
-                                </div>
-                              </div>
-
-                              <div className="flex justify-center">
-                                <span className="rounded-full bg-black/[0.06] px-2 py-0.5 text-[8px] font-mono text-gray-600">
-                                  ✦ Sleek created 3-way Deal Room
-                                </span>
-                              </div>
-
-                              <div className="flex justify-start">
-                                <div className="rounded-2xl rounded-tl-xs bg-white border border-black/[0.08] p-2 max-w-[85%] text-gray-800 shadow-sm leading-relaxed text-[11px]">
-                                  <strong className="text-black block text-[10px]">Sleek AI:</strong>
-                                  Connecting you both! Ade is a KYC-verified vendor. Sleek holds payment safely until buyer confirms receipt.
-                                </div>
-                              </div>
-
-                              <div className="flex justify-start">
-                                <div className="rounded-2xl rounded-tl-xs bg-[#E9E9EB] text-gray-900 px-3 py-1.5 max-w-[80%] text-[11px]">
-                                  <span className="font-bold text-gray-600 text-[9px] block">Ade (Verified Vendor ✓)</span>
-                                  Available for delivery today bro. Comes with 35W Dual Charger.
-                                </div>
-                              </div>
-
-                              <div className="flex justify-end">
-                                <div className="rounded-2xl rounded-tr-xs bg-[#007AFF] text-white px-3 py-1.5 max-w-[80%] shadow-sm">
-                                  ₦850k deal! Sleek lock it.
-                                </div>
-                              </div>
-
-                              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] p-2.5 space-y-1.5 text-[10px]">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-emerald-950 flex items-center gap-1">
-                                    <Lock className="h-3 w-3 text-emerald-600" /> ₦850,000 Safe Hold
-                                  </span>
-                                  <span className="rounded bg-emerald-600 text-white px-1 py-0.2 text-[8px] font-mono">
-                                    Protected
-                                  </span>
-                                </div>
-                                <div className="text-gray-600 leading-tight">
-                                  Vendor: <strong>Ade Tech (KYC Verified ✓)</strong>
-                                  <br />
-                                  Vendor dispatches directly with live tracking.
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* iMessage Input */}
-                            <div className="bg-white border-t border-black/[0.06] p-2 flex items-center gap-2 shrink-0">
-                              <span className="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 font-bold text-xs">+</span>
-                              <div className="flex-1 rounded-full border border-black/10 bg-gray-50 px-3 py-1 text-[11px] text-gray-400">
-                                iMessage
-                              </div>
-                              <div className="h-6 w-6 rounded-full bg-[#007AFF] flex items-center justify-center text-white text-xs font-bold">↑</div>
-                            </div>
-                          </div>
-                        )}
-
                         {activeChannel === "whatsapp" && (
                           <div className="flex-1 h-full flex flex-col text-xs bg-[#efeae2]">
                             <div className="bg-[#075E54] text-white px-3 py-2 flex items-center justify-between shrink-0">
