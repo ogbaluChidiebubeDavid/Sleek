@@ -74,13 +74,13 @@ export function PhotonStyleHero() {
             {/* Main Heading */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-black uppercase leading-[1.05] tracking-tight text-neutral-950 font-display">
               Buy &amp; Sell <br />
-              Anything <br />
+              Gears <br />
               <span className="text-[#00c980]">Through Chat AI</span>
             </h1>
 
             {/* Description */}
             <p className="max-w-xl text-sm sm:text-base text-gray-600 font-medium leading-relaxed">
-              Footwear, fashion, gadgets, beauty, and tech. Discover items through conversational AI, text our line to list in seconds, and trade safely with KYC-verified vendors on <strong className="text-gray-900 font-semibold">WhatsApp</strong> and <strong className="text-gray-900 font-semibold">Telegram</strong>.
+              Streetwear, activewear, everyday fits, and footwear. Discover trending fashion pieces through conversational AI, text our line to shop or list in seconds, and trade safely with KYC-verified vendors on <strong className="text-gray-900 font-semibold">WhatsApp</strong> and <strong className="text-gray-900 font-semibold">Telegram</strong>.
             </p>
 
             {/* Clean Inline Preview Line: Automatic 5-Second Channel Preview Loop */}
@@ -368,7 +368,7 @@ export function PhotonStyleHero() {
                                 <div className="rounded-xl rounded-tl-xs bg-[#182533] text-gray-100 p-2.5 max-w-[90%] space-y-1.5 text-[11px]">
                                   <p className="font-bold text-white text-[11px]">👟 Welcome to Sleek Store</p>
                                   <p className="text-[10px] text-gray-300">
-                                    Browse our full catalogue and checkout with Telegram Stars, Paystack NGN, or Base Crypto.
+                                    Browse our full clothing collection and checkout with Bank Transfer, Card, or OPay.
                                   </p>
                                   <a
                                     href={tgLink}

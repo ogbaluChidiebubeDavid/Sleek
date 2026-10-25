@@ -24,7 +24,7 @@ const faqs = [
   },
   {
     q: "How does shopping work on WhatsApp and Telegram?",
-    a: "Our conversational commerce on WhatsApp and Telegram remains fully active. On WhatsApp, you chat 1-on-1 with Sleek's AI personal shopper, browse interactive product carousels, choose sizes and colors with native WhatsApp Flows, and checkout via Paystack or OPay. On Telegram, you can launch our native Telegram Mini App storefront with Paystack, OPay, Telegram Stars, or Base crypto checkout.",
+    a: "Our conversational commerce on WhatsApp and Telegram remains fully active. On WhatsApp, you chat 1-on-1 with Sleek's AI personal shopper, browse interactive product carousels, choose sizes and colors with native WhatsApp Flows, and checkout via Paystack or OPay. On Telegram, you can launch our native storefront with Paystack, OPay, debit cards, or direct bank transfer.",
   },
   {
     q: "Why do vendors need to complete KYC verification?",

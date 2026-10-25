@@ -11,7 +11,7 @@ const testimonials = [
   },
   {
     quote:
-      "Crypto checkout was smooth and instant. Receipt and tracking came back instantly on WhatsApp.",
+      "Direct bank transfer checkout was smooth and instant. Receipt and tracking came back instantly on WhatsApp.",
     author: "James K.",
     role: "Abuja",
   },

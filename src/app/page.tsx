@@ -1,7 +1,7 @@
 import { PhotonNavbar } from "@/components/landing/PhotonNavbar";
 import { PhotonStyleHero } from "@/components/landing/PhotonStyleHero";
 import { TriChannelBento } from "@/components/landing/TriChannelBento";
-import { CryptoSettlementSection } from "@/components/landing/CryptoSettlementSection";
+import { ConvenientPaymentsSection } from "@/components/landing/ConvenientPaymentsSection";
 import { FAQ } from "@/components/landing/FAQ";
 import { CTA } from "@/components/landing/CTA";
 import { Footer } from "@/components/landing/Footer";
@@ -12,7 +12,7 @@ export default function Home() {
       <PhotonNavbar />
       <PhotonStyleHero />
       <TriChannelBento />
-      <CryptoSettlementSection />
+      <ConvenientPaymentsSection />
       <FAQ />
       <CTA />
       <Footer />

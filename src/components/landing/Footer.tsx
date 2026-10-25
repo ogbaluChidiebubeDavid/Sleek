@@ -36,8 +36,18 @@ export function Footer() {
                 </a>
               </li>
               <li>
+                <a 
+                  href={getWhatsAppLink("Hi Sleek! I want to track my order.")} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="hover:text-black transition text-emerald-700 font-semibold flex items-center gap-1"
+                >
+                  <span>📦 Track Order on WhatsApp</span>
+                </a>
+              </li>
+              <li>
                 <a href={tgLink} target="_blank" rel="noopener noreferrer" className="hover:text-black transition">
-                  Telegram Mini App
+                  Telegram Storefront
                 </a>
               </li>
             </ul>

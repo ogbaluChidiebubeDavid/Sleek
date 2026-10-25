@@ -16,7 +16,9 @@ import {
   ShieldCheck,
   Bot,
   Camera,
-  Check
+  Check,
+  Truck,
+  ShoppingBag
 } from "lucide-react";
 import Image from "next/image";
 import { getWhatsAppLink, getTelegramBotLink } from "@/lib/utils";
@@ -90,24 +92,24 @@ export function TriChannelBento() {
         {/* Bento Grid */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
 
-          {/* CARD 1: WhatsApp Conversational Terminal & Escrow Hold (Spans 8 cols on desktop) */}
+          {/* CARD 1: WhatsApp AI Order Tracking (Spans 8 cols on desktop) */}
           <div
-            id="deal-terminal"
+            id="order-tracking"
             className="md:col-span-7 lg:col-span-8 rounded-3xl border border-black/[0.08] bg-[#f8f9fb] p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden group hover:border-black/20 transition-all shadow-sm scroll-mt-24"
           >
             <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
             <div className="space-y-4 max-w-xl z-10">
               <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200/60 px-3 py-1 text-xs font-semibold text-emerald-700">
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>Conversational Deal Terminal</span>
+                <Truck className="h-3.5 w-3.5" />
+                <span>Instant AI Order Tracking</span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-black text-gray-950 font-display uppercase tracking-tight">
-                Natural Language Commerce. <br />
-                From Inquiry to Escrow.
+                Track Any Order in Seconds. <br />
+                Just Ask WhatsApp AI.
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                Describe what you want in everyday Pidgin or English, or upload an image. Sleek AI searches live inventory from KYC-verified Nigerian vendors, locks the deal price, and holds buyer funds safely until inspection.
+                No third-party apps, no lost waybills. Simply ask <em className="text-gray-900 font-medium">“Where is my order?”</em> in your WhatsApp chat, and Sleek AI retrieves live dispatch updates, rider contact info, and delivery estimates in real time.
               </p>
             </div>
 
@@ -115,41 +117,74 @@ export function TriChannelBento() {
             <div className="mt-8 rounded-2xl border border-black/[0.08] bg-white p-4 space-y-3 shadow-sm text-xs z-10 font-sans">
               <div className="flex items-center justify-between border-b border-black/[0.05] pb-2.5">
                 <div className="flex items-center gap-2">
-                  <div className="flex -space-x-1">
-                    <span className="h-5 w-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold">U</span>
-                    <span className="h-5 w-5 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[9px] font-bold">AI</span>
-                    <span className="h-5 w-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] font-bold">V</span>
+                  <div className="h-6 w-6 rounded-full bg-[#00a884] text-white flex items-center justify-center text-[10px] font-bold">
+                    📦
                   </div>
-                  <span className="font-bold text-gray-900">Sleek Verified Trade #9042</span>
+                  <div>
+                    <span className="font-bold text-gray-900 block leading-tight">Order Tracker: #SLK-2084</span>
+                    <span className="text-[10px] text-gray-500">Oversized Heavyweight Hoodie (Black • L)</span>
+                  </div>
                 </div>
-                <span className="rounded bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-mono font-semibold flex items-center gap-1">
-                  <ShieldCheck className="h-3 w-3" /> Safe Escrow Hold
+                <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-mono font-semibold flex items-center gap-1">
+                  <ShieldCheck className="h-3 w-3" /> Live Dispatch
                 </span>
               </div>
 
+              {/* Chat Simulation */}
               <div className="space-y-2">
-                <div className="rounded-xl bg-gray-50 border border-black/[0.04] p-2.5 text-gray-700 leading-relaxed">
-                  <strong className="text-black">Sleek AI:</strong> “Matched! Tunde (KYC Verified ✓) in Ikeja has MacBook Air M2 256GB ready for dispatch at <strong>₦850,000</strong>. Payment will be held safely in escrow until you confirm delivery.”
+                <div className="flex justify-end">
+                  <div className="rounded-2xl rounded-tr-xs bg-[#00a884] text-white px-3 py-1.5 max-w-[80%] text-[11px] shadow-xs">
+                    Where is my order #SLK-2084?
+                  </div>
                 </div>
-                <div className="flex items-center justify-between rounded-xl bg-emerald-500/[0.08] border border-emerald-500/20 px-3 py-2 text-[11px]">
-                  <span className="font-semibold text-emerald-950">✓ ₦850,000 Held in Safe Custody</span>
-                  <span className="font-mono text-emerald-700 font-bold">1.5% Fee on Confirmation</span>
+
+                <div className="rounded-xl bg-gray-50 border border-black/[0.04] p-3 text-gray-700 space-y-2 text-[11px] leading-relaxed">
+                  <div className="flex items-center justify-between">
+                    <strong className="text-gray-950 font-bold">Sleek AI:</strong>
+                    <span className="text-[10px] text-emerald-600 font-mono font-bold">Out for Delivery 🚀</span>
+                  </div>
+                  <p>
+                    Your hoodie from <strong className="text-gray-900">Ade Urban Wears</strong> is on the way!
+                  </p>
+                  <div className="rounded-lg bg-white border border-black/[0.06] p-2 space-y-1 text-[10px] font-mono">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Courier:</span>
+                      <span className="font-bold text-gray-900">GIG Logistics (#GIG-8942)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Rider Contact:</span>
+                      <span className="font-bold text-gray-900">Emeka (+234 803 123 4567)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Estimated Delivery:</span>
+                      <span className="font-bold text-emerald-700">Today before 4:00 PM</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="rounded-xl bg-emerald-500/[0.08] border border-emerald-500/20 px-3 py-2 text-[10px] flex items-center justify-between">
+                  <span className="font-medium text-emerald-950 flex items-center gap-1.5">
+                    <CheckCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <span>Payment held safely in escrow until you inspect your items</span>
+                  </span>
+                  <span className="font-mono text-emerald-700 font-bold shrink-0">Safe Hold</span>
                 </div>
               </div>
             </div>
 
             <div className="mt-6 pt-4 border-t border-black/[0.06] grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div>
-                <span className="font-bold text-gray-900 block">KYC-Verified Vendors</span>
-                <span className="text-gray-500">Every seller is identity-verified via facial match and national ID.</span>
+                <span className="font-bold text-gray-900 block">Live Courier Sync</span>
+                <span className="text-gray-500">Real-time tracking integrated with top Nigerian carriers.</span>
               </div>
               <div>
-                <span className="font-bold text-gray-900 block">Vendor-Handled Shipping</span>
-                <span className="text-gray-500">Vendors manage dispatch with direct tracking straight to your door.</span>
+                <span className="font-bold text-gray-900 block">Automated Dispatch Alerts</span>
+                <span className="text-gray-500">Instant WhatsApp notification the moment your vendor ships.</span>
               </div>
               <div>
                 <span className="font-bold text-gray-900 block">Protected Payout</span>
-                <span className="text-gray-500">Payment is released to the seller only when you confirm receipt.</span>
+                <span className="text-gray-500">Funds released to the seller only when you confirm receipt.</span>
               </div>
             </div>
           </div>
@@ -168,7 +203,7 @@ export function TriChannelBento() {
                 Instant Price Appraisal
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                Send a photo of any gadget, pair of shoes, or watch. Sleek identifies the item and suggests fair market value from active Nigerian market data.
+                Send a photo of any outfit, jacket, or sneakers. Sleek identifies the item and suggests fair market value from active Nigerian market data.
               </p>
             </div>
 
@@ -176,21 +211,21 @@ export function TriChannelBento() {
             <div className="my-5 rounded-2xl border border-black/[0.08] bg-white p-3.5 space-y-2.5 shadow-sm text-xs">
               <div className="flex items-center gap-2.5">
                 <div className="h-10 w-10 rounded-xl bg-orange-100/80 border border-orange-200 flex items-center justify-center text-lg">
-                  📷
+                  👕
                 </div>
                 <div>
-                  <div className="font-bold text-gray-950">Sony A7 IV + 28-70mm</div>
+                  <div className="font-bold text-gray-950">Fear of God Essentials Hoodie</div>
                   <div className="text-[10px] text-gray-500">Identified via image attachment</div>
                 </div>
               </div>
               <div className="rounded-xl bg-gray-50 p-2.5 text-[11px] space-y-1 text-gray-700">
                 <div className="flex justify-between items-center">
                   <span>Estimated Market Value:</span>
-                  <strong className="text-black font-mono font-bold text-xs">₦1,750,000</strong>
+                  <strong className="text-black font-mono font-bold text-xs">₦65,000</strong>
                 </div>
                 <div className="flex justify-between items-center text-emerald-700 font-medium">
                   <span>Active Nigerian Inquiries:</span>
-                  <span className="font-semibold">14 buyers searching</span>
+                  <span className="font-semibold">28 buyers searching</span>
                 </div>
               </div>
             </div>
@@ -231,41 +266,41 @@ export function TriChannelBento() {
                 </form>
               )}
               <p className="text-[10px] text-gray-500">
-                ✦ Send a photo of any item to get real-time Nigerian market pricing.
+                ✦ Send a photo of any fashion item to get real-time Nigerian market pricing.
               </p>
             </div>
           </div>
 
-          {/* CARD 3: WhatsApp 1-on-1 Conversational Catalog (Spans 6 cols) */}
+          {/* CARD 3: Interactive Fashion Shopping (Spans 6 cols) */}
           <div
             className="md:col-span-6 rounded-3xl border border-black/[0.08] bg-[#f8f9fb] p-6 sm:p-8 flex flex-col justify-between hover:border-black/20 transition-all shadow-sm"
           >
             <div className="space-y-3">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366]/10 border border-[#25D366]/30 px-3 py-1 text-xs font-semibold text-[#128C7E]">
-                <MessageSquare className="h-3.5 w-3.5" />
-                <span>WhatsApp Catalog Commerce</span>
+                <ShoppingBag className="h-3.5 w-3.5" />
+                <span>Interactive Fashion Shopping</span>
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-gray-950 font-display uppercase tracking-tight">
-                1-on-1 AI Shopping &amp; Flow Forms
+                Curated Drops &amp; Instant Sizing
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                For everyday shopping, WhatsApp is effortless. Explore interactive carousels, select colors and sizes with native WhatsApp Flows, and checkout via Paystack or OPay.
+                Discover streetwear, activewear, and everyday outfits directly on WhatsApp. Select your exact waist, chest size, and colors using native WhatsApp Flows, then checkout in seconds.
               </p>
             </div>
 
             <div className="my-6 rounded-2xl border border-black/[0.08] bg-white p-4 space-y-2 text-xs shadow-sm">
               <div className="flex items-center justify-between text-[11px] text-gray-500">
-                <span>Verified Vendors</span>
-                <span className="font-bold text-gray-900">Footwear, Fashion &amp; Tech</span>
+                <span>Verified Fashion Vendors</span>
+                <span className="font-bold text-gray-900">Streetwear, Casuals &amp; Kicks</span>
               </div>
               <div className="grid grid-cols-2 gap-2 pt-2">
                 <div className="rounded-xl border border-black/[0.06] p-2 bg-gray-50 text-[11px]">
                   <strong className="block text-gray-900">WhatsApp Flows</strong>
-                  <span className="text-gray-500">In-chat size and color picker</span>
+                  <span className="text-gray-500">In-chat size (S, M, L, XL, XXL) &amp; color</span>
                 </div>
                 <div className="rounded-xl border border-black/[0.06] p-2 bg-gray-50 text-[11px]">
-                  <strong className="block text-gray-900">Paystack / OPay</strong>
-                  <span className="text-gray-500">Instant secure bank payment</span>
+                  <strong className="block text-gray-900">Direct Bank &amp; Cards</strong>
+                  <span className="text-gray-500">Instant secure transfer or card debit</span>
                 </div>
               </div>
             </div>
@@ -276,42 +311,42 @@ export function TriChannelBento() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-xs font-bold text-[#128C7E] hover:underline"
             >
-              <span>Chat with WhatsApp Shopper</span>
+              <span>Browse Collection on WhatsApp</span>
               <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
           </div>
 
-          {/* CARD 4: Telegram Mini App & Multi-Currency (Spans 6 cols) */}
+          {/* CARD 4: Instant Mobile Storefront (Spans 6 cols) */}
           <div
             className="md:col-span-6 rounded-3xl border border-black/[0.08] bg-[#f8f9fb] p-6 sm:p-8 flex flex-col justify-between hover:border-black/20 transition-all shadow-sm"
           >
             <div className="space-y-3">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-[#229ED9]/10 border border-[#229ED9]/30 px-3 py-1 text-xs font-semibold text-[#229ED9]">
-                <Bot className="h-3.5 w-3.5" />
-                <span>Telegram Bot &amp; Mini App</span>
+                <Smartphone className="h-3.5 w-3.5" />
+                <span>Instant Mobile Storefront</span>
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-gray-950 font-display uppercase tracking-tight">
-                Instant Mini App Storefront
+                Complete Clothing Storefront
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                Launch the complete Sleek catalog inside Telegram without downloading an extra app. Supports Telegram Stars, Paystack NGN, and crypto payments on Base.
+                Launch the complete Sleek clothing catalog on any smartphone without installing an extra app. Filter styles, compare prices, and checkout with bank transfer, cards, or mobile money.
               </p>
             </div>
 
             <div className="my-6 rounded-2xl border border-black/[0.08] bg-white p-4 space-y-2 text-xs shadow-sm">
               <div className="flex items-center justify-between text-[11px] text-gray-500">
-                <span>Telegram WebApp Store</span>
+                <span>Direct Mobile Store</span>
                 <span className="font-mono text-emerald-600">sleekai.xyz/catalog</span>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-2 text-[10px] text-center">
                 <div className="rounded-lg bg-gray-50 p-2 border border-black/[0.04]">
-                  ⭐ Telegram Stars
+                  🏦 Bank Transfer
                 </div>
                 <div className="rounded-lg bg-gray-50 p-2 border border-black/[0.04]">
-                  💳 Paystack &amp; OPay
+                  💳 Debit Cards (Visa/MC)
                 </div>
                 <div className="rounded-lg bg-gray-50 p-2 border border-black/[0.04]">
-                  ⚡ Base USDC
+                  ⚡ OPay &amp; Moniepoint
                 </div>
               </div>
             </div>
@@ -322,7 +357,7 @@ export function TriChannelBento() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-xs font-bold text-[#229ED9] hover:underline"
             >
-              <span>Launch Telegram Storefront</span>
+              <span>Launch Clothing Catalog</span>
               <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
           </div>
