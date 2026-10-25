@@ -41,15 +41,6 @@ export function PhotonNavbar() {
         {/* Action CTAs */}
         <div className="hidden items-center gap-3 sm:flex">
           <a
-            href={getWhatsAppLink("Hi Sleek! I want to track my order.")}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-50/80 px-3.5 py-1.5 text-xs font-semibold text-emerald-800 shadow-sm transition hover:bg-emerald-100 hover:border-emerald-500/40 active:scale-95 cursor-pointer"
-          >
-            <span>📦 Track Order via WhatsApp</span>
-          </a>
-
-          <a
             href={tgLink}
             target="_blank"
             rel="noopener noreferrer"
@@ -92,15 +83,6 @@ export function PhotonNavbar() {
           className="border-b border-black/10 bg-white px-6 py-6 shadow-2xl lg:hidden transition-all duration-200"
         >
           <div className="flex flex-col gap-4 text-sm font-semibold text-gray-900">
-            <a
-              href={getWhatsAppLink("Hi Sleek! I want to track my order.")}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setOpen(false)}
-              className="py-1 text-emerald-700 font-bold hover:text-emerald-800 transition flex items-center gap-1.5"
-            >
-              <span>📦 Track Order on WhatsApp</span>
-            </a>
             <a href="#features" onClick={() => setOpen(false)} className="py-1 hover:text-emerald-600 transition">
               Conversational Features
             </a>
