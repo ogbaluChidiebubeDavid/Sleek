@@ -48,21 +48,6 @@ const supportedMethods: SupportedPayment[] = [
     ),
   },
   {
-    id: "opay",
-    name: "OPay & Digital Wallets",
-    subtitle: "1-Tap fast mobile checkout",
-    badge: "Zero Delays",
-    channels: "OPay • Moniepoint • PalmPay",
-    settlementTime: "Instant (<1s)",
-    popularFor: "Instant authorization from your favorite mobile fintech wallet",
-    color: "#00A859",
-    renderIcon: () => (
-      <div className="w-10 h-10 rounded-xl bg-emerald-600/10 text-emerald-600 flex items-center justify-center font-bold text-sm shrink-0">
-        <span className="font-mono font-black text-xs">OPay</span>
-      </div>
-    ),
-  },
-  {
     id: "paystack",
     name: "Paystack Gateway",
     subtitle: "CBN-certified multi-channel processor",
@@ -89,21 +74,6 @@ const supportedMethods: SupportedPayment[] = [
     renderIcon: () => (
       <div className="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-600 flex items-center justify-center font-bold text-lg shrink-0">
         <Smartphone className="w-5 h-5" />
-      </div>
-    ),
-  },
-  {
-    id: "escrow",
-    name: "Sleek Safe Payment Hold",
-    subtitle: "100% buyer protection guarantee",
-    badge: "Protected",
-    channels: "Safe Custody • Zero 'Pay Before Delivery' Scams",
-    settlementTime: "Held until Delivery",
-    popularFor: "Funds held safely until you receive and inspect your clothing items",
-    color: "#10B981",
-    renderIcon: () => (
-      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-lg shrink-0">
-        <ShieldCheck className="w-5 h-5" />
       </div>
     ),
   },

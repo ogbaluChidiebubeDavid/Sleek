@@ -26,7 +26,7 @@ import { getWhatsAppLink, getTelegramBotLink } from "@/lib/utils";
 export function TriChannelBento() {
   const waLink = getWhatsAppLink();
   const tgLink = getTelegramBotLink();
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [orderNumber, setOrderNumber] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [isGlowing, setIsGlowing] = useState(false);
 
@@ -35,12 +35,12 @@ export function TriChannelBento() {
     const handleTriggerGlow = () => {
       setIsGlowing(true);
       if (typeof document !== "undefined") {
-        const target = document.getElementById("price-appraisal");
+        const target = document.getElementById("order-tracking") || document.getElementById("price-appraisal");
         if (target) {
           target.scrollIntoView({ behavior: "smooth", block: "center" });
         }
         setTimeout(() => {
-          const input = document.getElementById("appraisal-phone-input");
+          const input = document.getElementById("order-tracking-input") || document.getElementById("appraisal-phone-input");
           if (input) {
             input.focus();
           }
@@ -50,11 +50,11 @@ export function TriChannelBento() {
     };
 
     if (typeof window !== "undefined") {
-      if (window.location.hash === "#price-appraisal") {
+      if (window.location.hash === "#order-tracking" || window.location.hash === "#price-appraisal") {
         setTimeout(handleTriggerGlow, 200);
       }
       const onHash = () => {
-        if (window.location.hash === "#price-appraisal") {
+        if (window.location.hash === "#order-tracking" || window.location.hash === "#price-appraisal") {
           handleTriggerGlow();
         }
       };
@@ -65,12 +65,14 @@ export function TriChannelBento() {
     }
   }, []);
 
-  const handleAppraisalSubmit = (e: React.FormEvent) => {
+  const handleTrackingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phoneNumber.trim()) return;
     setSubmitted(true);
     if (typeof window !== "undefined") {
-      window.open(getWhatsAppLink(`Hi Sleek! I want an instant market appraisal for my item. My contact: ${phoneNumber}`), "_blank");
+      const query = orderNumber.trim()
+        ? `Hi Sleek! Where is my order ${orderNumber.trim()}?`
+        : "Hi Sleek! Where is my order?";
+      window.open(getWhatsAppLink(query), "_blank");
     }
   };
 
@@ -92,24 +94,24 @@ export function TriChannelBento() {
         {/* Bento Grid */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
 
-          {/* CARD 1: WhatsApp AI Order Tracking (Spans 8 cols on desktop) */}
+          {/* CARD 1: WhatsApp Conversational Terminal & Escrow Hold (Spans 8 cols on desktop) */}
           <div
-            id="order-tracking"
+            id="deal-terminal"
             className="md:col-span-7 lg:col-span-8 rounded-3xl border border-black/[0.08] bg-[#f8f9fb] p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden group hover:border-black/20 transition-all shadow-sm scroll-mt-24"
           >
             <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
             <div className="space-y-4 max-w-xl z-10">
               <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200/60 px-3 py-1 text-xs font-semibold text-emerald-700">
-                <Truck className="h-3.5 w-3.5" />
-                <span>Instant AI Order Tracking</span>
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Conversational Deal Terminal</span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-black text-gray-950 font-display uppercase tracking-tight">
-                Track Any Order in Seconds. <br />
-                Just Ask WhatsApp AI.
+                Natural Language Commerce. <br />
+                From Inquiry to Escrow.
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                No third-party apps, no lost waybills. Simply ask <em className="text-gray-900 font-medium">“Where is my order?”</em> in your WhatsApp chat, and Sleek AI retrieves live dispatch updates, rider contact info, and delivery estimates in real time.
+                Describe what you want in everyday Pidgin or English, or upload an image. Sleek AI searches live inventory from KYC-verified Nigerian vendors, locks the deal price, and holds buyer funds safely until inspection.
               </p>
             </div>
 
@@ -117,139 +119,115 @@ export function TriChannelBento() {
             <div className="mt-8 rounded-2xl border border-black/[0.08] bg-white p-4 space-y-3 shadow-sm text-xs z-10 font-sans">
               <div className="flex items-center justify-between border-b border-black/[0.05] pb-2.5">
                 <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-full bg-[#00a884] text-white flex items-center justify-center text-[10px] font-bold">
-                    📦
+                  <div className="flex -space-x-1">
+                    <span className="h-5 w-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold">U</span>
+                    <span className="h-5 w-5 rounded-full bg-neutral-900 text-white flex items-center justify-center text-[9px] font-bold">AI</span>
+                    <span className="h-5 w-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] font-bold">V</span>
                   </div>
-                  <div>
-                    <span className="font-bold text-gray-900 block leading-tight">Order Tracker: #SLK-2084</span>
-                    <span className="text-[10px] text-gray-500">Oversized Heavyweight Hoodie (Black • L)</span>
-                  </div>
+                  <span className="font-bold text-gray-900">Sleek Verified Trade #9042</span>
                 </div>
-                <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-mono font-semibold flex items-center gap-1">
-                  <ShieldCheck className="h-3 w-3" /> Live Dispatch
+                <span className="rounded bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-mono font-semibold flex items-center gap-1">
+                  <ShieldCheck className="h-3 w-3" /> Safe Escrow Hold
                 </span>
               </div>
 
-              {/* Chat Simulation */}
               <div className="space-y-2">
-                <div className="flex justify-end">
-                  <div className="rounded-2xl rounded-tr-xs bg-[#00a884] text-white px-3 py-1.5 max-w-[80%] text-[11px] shadow-xs">
-                    Where is my order #SLK-2084?
-                  </div>
+                <div className="rounded-xl bg-gray-50 border border-black/[0.04] p-2.5 text-gray-700 leading-relaxed">
+                  <strong className="text-black">Sleek AI:</strong> “Matched! Tunde (KYC Verified ✓) in Ikeja has Fear of God Essentials Hoodie (Black • L) ready for dispatch at <strong>₦65,000</strong>. Payment will be held safely in escrow until you confirm delivery.”
                 </div>
-
-                <div className="rounded-xl bg-gray-50 border border-black/[0.04] p-3 text-gray-700 space-y-2 text-[11px] leading-relaxed">
-                  <div className="flex items-center justify-between">
-                    <strong className="text-gray-950 font-bold">Sleek AI:</strong>
-                    <span className="text-[10px] text-emerald-600 font-mono font-bold">Out for Delivery 🚀</span>
-                  </div>
-                  <p>
-                    Your hoodie from <strong className="text-gray-900">Ade Urban Wears</strong> is on the way!
-                  </p>
-                  <div className="rounded-lg bg-white border border-black/[0.06] p-2 space-y-1 text-[10px] font-mono">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Courier:</span>
-                      <span className="font-bold text-gray-900">GIG Logistics (#GIG-8942)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Rider Contact:</span>
-                      <span className="font-bold text-gray-900">Emeka (+234 803 123 4567)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Estimated Delivery:</span>
-                      <span className="font-bold text-emerald-700">Today before 4:00 PM</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress bar */}
-                <div className="rounded-xl bg-emerald-500/[0.08] border border-emerald-500/20 px-3 py-2 text-[10px] flex items-center justify-between">
-                  <span className="font-medium text-emerald-950 flex items-center gap-1.5">
-                    <CheckCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                    <span>Payment held safely in escrow until you inspect your items</span>
-                  </span>
-                  <span className="font-mono text-emerald-700 font-bold shrink-0">Safe Hold</span>
+                <div className="flex items-center justify-between rounded-xl bg-emerald-500/[0.08] border border-emerald-500/20 px-3 py-2 text-[11px]">
+                  <span className="font-semibold text-emerald-950">✓ ₦65,000 Held in Safe Custody</span>
+                  <span className="font-mono text-emerald-700 font-bold">1.5% Fee on Confirmation</span>
                 </div>
               </div>
             </div>
 
             <div className="mt-6 pt-4 border-t border-black/[0.06] grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div>
-                <span className="font-bold text-gray-900 block">Live Courier Sync</span>
-                <span className="text-gray-500">Real-time tracking integrated with top Nigerian carriers.</span>
+                <span className="font-bold text-gray-900 block">KYC-Verified Vendors</span>
+                <span className="text-gray-500">Every seller is identity-verified via facial match and national ID.</span>
               </div>
               <div>
-                <span className="font-bold text-gray-900 block">Automated Dispatch Alerts</span>
-                <span className="text-gray-500">Instant WhatsApp notification the moment your vendor ships.</span>
+                <span className="font-bold text-gray-900 block">Vendor-Handled Shipping</span>
+                <span className="text-gray-500">Vendors manage dispatch with direct tracking straight to your door.</span>
               </div>
               <div>
                 <span className="font-bold text-gray-900 block">Protected Payout</span>
-                <span className="text-gray-500">Funds released to the seller only when you confirm receipt.</span>
+                <span className="text-gray-500">Payment is released to the seller only when you confirm receipt.</span>
               </div>
             </div>
           </div>
 
-          {/* CARD 2: Autonomous Appraisal & Sourcing (Spans 5/4 cols) */}
+          {/* CARD 2: Live WhatsApp Order Tracking (Spans 5/4 cols) */}
           <div
-            id="price-appraisal"
+            id="order-tracking"
             className="md:col-span-5 lg:col-span-4 rounded-3xl border border-black/[0.08] bg-[#f8f9fb] p-6 sm:p-8 flex flex-col justify-between hover:border-black/20 transition-all shadow-sm relative scroll-mt-24"
           >
-            <div id="appraisal" className="space-y-3">
+            <div className="space-y-3">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/60 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
-                <Camera className="h-3 w-3" />
-                <span>Camera AI Valuation</span>
+                <Truck className="h-3 w-3" />
+                <span>Instant AI Order Tracking</span>
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-gray-950 font-display uppercase tracking-tight">
-                Instant Price Appraisal
+                Live Order Tracking
               </h3>
               <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                Send a photo of any outfit, jacket, or sneakers. Sleek identifies the item and suggests fair market value from active Nigerian market data.
+                Track any order in seconds. Simply text <em className="text-gray-900 font-medium">“Where is my order?”</em> to Sleek AI on WhatsApp for live waybill status, courier info, and delivery updates.
               </p>
             </div>
 
-            {/* Appraisal Identification Mockup */}
+            {/* Visual Order Tracking Mockup */}
             <div className="my-5 rounded-2xl border border-black/[0.08] bg-white p-3.5 space-y-2.5 shadow-sm text-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="h-10 w-10 rounded-xl bg-orange-100/80 border border-orange-200 flex items-center justify-center text-lg">
-                  👕
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-lg">
+                    📦
+                  </div>
+                  <div>
+                    <div className="font-bold text-gray-950">Order #SLK-2084</div>
+                    <div className="text-[10px] text-gray-500">Essentials Hoodie (Black • L)</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-bold text-gray-950">Fear of God Essentials Hoodie</div>
-                  <div className="text-[10px] text-gray-500">Identified via image attachment</div>
-                </div>
+                <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-mono font-bold">
+                  Out for Delivery 🚀
+                </span>
               </div>
               <div className="rounded-xl bg-gray-50 p-2.5 text-[11px] space-y-1 text-gray-700">
                 <div className="flex justify-between items-center">
-                  <span>Estimated Market Value:</span>
-                  <strong className="text-black font-mono font-bold text-xs">₦65,000</strong>
+                  <span className="text-gray-500">Courier:</span>
+                  <strong className="text-black font-mono text-xs">GIG Logistics (#GIG-8942)</strong>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Rider Contact:</span>
+                  <span className="text-gray-900 font-medium">Emeka (+234 803 123 4567)</span>
                 </div>
                 <div className="flex justify-between items-center text-emerald-700 font-medium">
-                  <span>Active Nigerian Inquiries:</span>
-                  <span className="font-semibold">28 buyers searching</span>
+                  <span>Estimated Arrival:</span>
+                  <span className="font-semibold">Today before 4:00 PM</span>
                 </div>
               </div>
             </div>
 
-            {/* PHONE NUMBER INPUT FIELD WITH ANIMATED GLOWING OUTLINE UPON CLICK */}
+            {/* ORDER TRACKING INPUT FIELD */}
             <div className="space-y-2 pt-1 border-t border-black/[0.06]">
               <div className="text-[11px] font-bold text-gray-900 flex items-center justify-between">
-                <span>WhatsApp appraisal request:</span>
+                <span>WhatsApp order inquiry:</span>
                 <span className="text-[10px] font-mono text-emerald-600 font-medium">Instant AI</span>
               </div>
 
               {submitted ? (
                 <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex items-center gap-2 text-xs text-emerald-800">
                   <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span>Connecting to WhatsApp appraisal line...</span>
+                  <span>Connecting to WhatsApp order tracking...</span>
                 </div>
               ) : (
-                <form onSubmit={handleAppraisalSubmit} className="relative flex items-center">
+                <form onSubmit={handleTrackingSubmit} className="relative flex items-center">
                   <input
-                    type="tel"
-                    id="appraisal-phone-input"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="Enter phone number (e.g. 080...)"
+                    type="text"
+                    id="order-tracking-input"
+                    value={orderNumber}
+                    onChange={(e) => setOrderNumber(e.target.value)}
+                    placeholder="Enter order # (e.g. SLK-2084)"
                     className={`w-full rounded-2xl border bg-white py-3 pl-3.5 pr-28 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none transition-all duration-300 shadow-inner ${
                       isGlowing 
                         ? "border-emerald-500 ring-4 ring-emerald-500/40 shadow-[0_0_25px_rgba(0,201,128,0.4)] scale-[1.01]" 
@@ -260,13 +238,13 @@ export function TriChannelBento() {
                     type="submit"
                     className="absolute right-1 top-1 bottom-1 rounded-xl bg-emerald-600 px-3.5 text-xs font-bold text-white hover:bg-emerald-700 active:scale-95 transition flex items-center gap-1 shadow-xs cursor-pointer"
                   >
-                    <span>Appraise</span>
+                    <span>Track</span>
                     <ArrowRight className="h-3 w-3" />
                   </button>
                 </form>
               )}
               <p className="text-[10px] text-gray-500">
-                ✦ Send a photo of any fashion item to get real-time Nigerian market pricing.
+                ✦ Send your order number on WhatsApp to get real-time delivery status &amp; courier updates.
               </p>
             </div>
           </div>
