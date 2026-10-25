@@ -228,6 +228,7 @@ export function ConvenientPaymentsSection() {
 
         </div>
 
+      </div>
     </section>
   );
 }
