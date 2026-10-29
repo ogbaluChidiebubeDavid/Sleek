@@ -20,7 +20,7 @@ export function Footer() {
             </p>
             <div className="pt-2 flex items-center gap-2 text-[11px] font-mono text-gray-500">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span>Lagos, Nigeria • Operating 24/7</span>
+              <span>Operating 24/7</span>
             </div>
           </div>
 
