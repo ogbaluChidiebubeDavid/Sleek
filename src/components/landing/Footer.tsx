@@ -104,7 +104,7 @@ export function Footer() {
 
         {/* Bottom Strip */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-gray-500">
-          <p>© {new Date().getFullYear()} Sleek Technologies Ltd. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} The Sleek Hub by Ebube Business Ventures. All rights reserved.</p>
           <div className="flex items-center gap-4 text-gray-400 font-mono text-[11px]">
             <span>KYC Verified Vendors</span>
             <span>•</span>
